@@ -1,4 +1,4 @@
-# AI 教师培训平台
+# Teacher Training Management Platform (AI 教师培训平台)
 
 一个集成了人工智能的 Web 应用，为在线英语教育的新任教师提供标准化的试讲练习平台。
 
@@ -19,12 +19,12 @@ AI教师培训平台-trae/
 - Vue Router (路由管理)
 - Pinia (状态管理)
 - Vite (构建工具)
+- Tailwind CSS (样式框架)
 
 ### 后端
 - FastAPI (Python Web框架)
 - SQLAlchemy (ORM)
-- PostgreSQL/SQLite (数据库)
-- Alembic (数据库迁移)
+- Supabase (数据库和认证)
 
 ### AI服务 (第三方API)
 - Google Cloud Speech-to-Text (语音识别)
@@ -54,8 +54,9 @@ uvicorn app.main:app --reload
 创建 `.env` 文件并配置以下变量：
 
 ```env
-# 数据库
-DATABASE_URL=postgresql://user:password@localhost/dbname
+# Supabase 配置
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 
 # AI服务API密钥 (生产环境配置)
 GOOGLE_API_KEY=your_google_api_key
