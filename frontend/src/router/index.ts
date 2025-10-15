@@ -130,16 +130,30 @@ const router = createRouter({
 // 路由守卫
 router.beforeEach(async (to, from, next) => {
   try {
-    // 延迟获取store，确保Pinia已经初始化
-    const authStore = useSupabaseAuthStore()
-    
-    // 初始化认证状态
-    await authStore.initializeAuth()
-    
     // 检查是否配置了 Supabase
     if (!isSupabaseConfigured) {
       console.warn('Supabase not configured, allowing access to all routes (demo mode)')
       return next()
+    }
+    
+    // 延迟获取store，确保Pinia已经初始化
+    const authStore = useSupabaseAuthStore()
+    
+    // 初始化认证状态（添加超时保护）
+    const initPromise = authStore.initializeAuth()
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Auth initialization timeout')), 5000)
+    )
+    
+    try {
+      await Promise.race([initPromise, timeoutPromise])
+    } catch (error) {
+      console.warn('Auth initialization failed or timed out:', error)
+      // 如果认证初始化失败，允许访问公共路由
+      if (!to.meta.requiresAuth) {
+        return next()
+      }
+      return next('/login')
     }
     
     if (to.meta.requiresAuth && !authStore.isAuthenticated) {
@@ -155,8 +169,12 @@ router.beforeEach(async (to, from, next) => {
     }
   } catch (error) {
     console.error('Router guard error:', error)
-    // 如果路由守卫出错，允许继续导航
-    next()
+    // 如果路由守卫出错，允许访问公共路由
+    if (!to.meta.requiresAuth) {
+      next()
+    } else {
+      next('/login')
+    }
   }
 })
 

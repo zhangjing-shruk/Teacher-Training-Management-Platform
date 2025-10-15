@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { RouterView } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
+import { useSupabaseAuthStore } from '@/stores/supabaseAuth'
 import { onMounted } from 'vue'
 
-const authStore = useAuthStore()
+const authStore = useSupabaseAuthStore()
 
 onMounted(() => {
   // 检查本地存储的认证状态

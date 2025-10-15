@@ -29,19 +29,34 @@ export const useSupabaseAuthStore = defineStore('supabaseAuth', () => {
   const initializeAuth = async () => {
     try {
       loading.value = true
+      error.value = null
       
       // 检查是否有有效的 Supabase 配置
       if (!isSupabaseConfigured || !supabase) {
         console.warn('Supabase not configured, skipping auth initialization')
-        return
+        loading.value = false
+        return Promise.resolve()
       }
       
-      // 获取当前会话
-      const { data: { session: currentSession } } = await supabase.auth.getSession()
+      // 获取当前会话（添加超时保护）
+      const sessionPromise = supabase.auth.getSession()
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Session fetch timeout')), 3000)
+      )
+      
+      const { data: { session: currentSession } } = await Promise.race([
+        sessionPromise,
+        timeoutPromise
+      ]) as any
       
       if (currentSession) {
         session.value = currentSession
-        await fetchUserProfile(currentSession.user.id)
+        try {
+          await fetchUserProfile(currentSession.user.id)
+        } catch (profileError) {
+          console.warn('Failed to fetch user profile:', profileError)
+          // 继续执行，不阻塞认证流程
+        }
       }
 
       // 监听认证状态变化
@@ -49,7 +64,11 @@ export const useSupabaseAuthStore = defineStore('supabaseAuth', () => {
         session.value = newSession
         
         if (newSession?.user) {
-          await fetchUserProfile(newSession.user.id)
+          try {
+            await fetchUserProfile(newSession.user.id)
+          } catch (profileError) {
+            console.warn('Failed to fetch user profile on auth change:', profileError)
+          }
         } else {
           user.value = null
         }
@@ -57,6 +76,7 @@ export const useSupabaseAuthStore = defineStore('supabaseAuth', () => {
     } catch (err: any) {
       console.error('Auth initialization error:', err)
       error.value = err.message
+      // 不要抛出错误，让应用继续运行
     } finally {
       loading.value = false
     }
