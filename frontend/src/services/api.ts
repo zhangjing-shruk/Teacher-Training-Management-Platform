@@ -1,6 +1,15 @@
 import type { LoginCredentials, AuthResponse, User } from '@/types/auth'
 
+// 检查是否有有效的API配置
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+const isValidApiUrl = API_BASE_URL && 
+  !API_BASE_URL.includes('your-backend-domain') && 
+  !API_BASE_URL.includes('placeholder')
+
+// 如果没有有效的API配置，输出警告
+if (!isValidApiUrl) {
+  console.warn('Backend API not configured or using placeholder URL. API calls will be disabled.')
+}
 
 // HTTP客户端配置
 class ApiClient {
@@ -14,6 +23,11 @@ class ApiClient {
     endpoint: string,
     options: RequestInit = {}
   ): Promise<T> {
+    // 如果没有有效的API配置，抛出友好的错误
+    if (!isValidApiUrl) {
+      throw new Error('Backend API is not configured. Please set up the backend service or configure environment variables.')
+    }
+
     const url = `${this.baseURL}${endpoint}`
     const token = localStorage.getItem('access_token')
 
@@ -32,7 +46,7 @@ class ApiClient {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
-      
+
       return await response.json()
     } catch (error) {
       console.error('API request failed:', error)
