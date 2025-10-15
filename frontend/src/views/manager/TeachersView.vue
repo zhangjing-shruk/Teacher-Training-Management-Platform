@@ -337,14 +337,23 @@ const formatDate = (dateString: string) => {
 }
 
 const addTeacher = () => {
+  const name = newTeacher.value.name.trim()
+  const email = newTeacher.value.email.trim()
+  const password = newTeacher.value.password.trim()
+  
+  if (!name || !email || !password) {
+    alert('请填写完整的教师信息')
+    return
+  }
+
   const newId = Math.max(...teachers.value.map(t => t.id)) + 1
   teachers.value.push({
     id: newId,
-    name: newTeacher.value.name,
-    email: newTeacher.value.email,
+    name: name,
+    email: email,
     status: 'training',
     lectureCount: 0,
-    createdAt: new Date().toISOString().split('T')[0]
+    createdAt: new Date().toISOString().split('T')[0] || new Date().toLocaleDateString()
   })
   
   // 重置表单
@@ -363,8 +372,11 @@ const editTeacher = (teacher: Teacher) => {
   if (newName !== null && newName !== teacher.name && newName.trim() !== '') {
     const index = teachers.value.findIndex(t => t.id === teacher.id)
     if (index > -1) {
-      teachers.value[index].name = newName
-      alert('教师信息更新成功！')
+      const teacherItem = teachers.value[index]
+      if (teacherItem) {
+        teacherItem.name = newName.trim()
+        alert('教师信息更新成功！')
+      }
     }
   }
 }

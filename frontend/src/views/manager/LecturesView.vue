@@ -539,12 +539,19 @@ const submitReview = () => {
   }
 
   // 更新讲座状态
-  if (selectedLecture.value && reviewForm.value.result && reviewForm.value.feedback) {
-    const index = lectures.value.findIndex(l => l.id === selectedLecture.value!.id)
+  const lecture = selectedLecture.value
+  const result = reviewForm.value.result
+  const feedback = reviewForm.value.feedback
+  
+  if (lecture && result && feedback) {
+    const index = lectures.value.findIndex(l => l.id === lecture.id)
     if (index > -1) {
-      lectures.value[index].status = reviewForm.value.result as 'passed' | 'failed'
-      lectures.value[index].managerFeedback = reviewForm.value.feedback
-      lectures.value[index].reviewedAt = new Date().toISOString()
+      const lectureItem = lectures.value[index]
+      if (lectureItem) {
+        lectureItem.status = result as 'passed' | 'failed'
+        lectureItem.managerFeedback = feedback
+        lectureItem.reviewedAt = new Date().toISOString()
+      }
     }
   }
 
