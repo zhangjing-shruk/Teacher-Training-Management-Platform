@@ -128,21 +128,35 @@ const router = createRouter({
 
 // 路由守卫
 router.beforeEach(async (to, from, next) => {
-  // 延迟获取store，确保Pinia已经初始化
-  const authStore = useSupabaseAuthStore()
-  
-  // 初始化认证状态
-  await authStore.initializeAuth()
-  
-  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    next('/login')
-  } else if (to.meta.requiresGuest && authStore.isAuthenticated) {
-    // 根据用户角色重定向
-    next(authStore.user?.role === 'manager' ? '/manager' : '/teacher')
-  } else if (to.meta.role && authStore.user?.role !== to.meta.role) {
-    // 角色权限检查
-    next('/login')
-  } else {
+  try {
+    // 延迟获取store，确保Pinia已经初始化
+    const authStore = useSupabaseAuthStore()
+    
+    // 初始化认证状态
+    await authStore.initializeAuth()
+    
+    // 检查是否有有效的 Supabase 配置
+    if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+      // 如果没有 Supabase 配置，允许访问所有页面（开发/演示模式）
+      console.warn('Supabase not configured, allowing all routes')
+      next()
+      return
+    }
+    
+    if (to.meta.requiresAuth && !authStore.isAuthenticated) {
+      next('/login')
+    } else if (to.meta.requiresGuest && authStore.isAuthenticated) {
+      // 根据用户角色重定向
+      next(authStore.user?.role === 'manager' ? '/manager' : '/teacher')
+    } else if (to.meta.role && authStore.user?.role !== to.meta.role) {
+      // 角色权限检查
+      next('/login')
+    } else {
+      next()
+    }
+  } catch (error) {
+    console.error('Router guard error:', error)
+    // 如果路由守卫出错，允许继续导航
     next()
   }
 })
