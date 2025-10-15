@@ -1,21 +1,28 @@
 import { createClient } from '@supabase/supabase-js'
 
 // Supabase 配置
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://placeholder.supabase.co'
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder-key'
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
-  console.warn('Missing Supabase environment variables, using placeholder values')
+// 检查是否有有效的 Supabase 配置
+const hasValidSupabaseConfig = supabaseUrl && supabaseAnonKey && 
+  supabaseUrl.startsWith('https://') && supabaseUrl.includes('.supabase.co')
+
+if (!hasValidSupabaseConfig) {
+  console.warn('Supabase not configured or invalid configuration. Running in demo mode.')
 }
 
-// 创建 Supabase 客户端
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+// 创建 Supabase 客户端（仅在有有效配置时）
+export const supabase = hasValidSupabaseConfig ? createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true
   }
-})
+}) : null
+
+// 导出配置状态
+export const isSupabaseConfigured = hasValidSupabaseConfig
 
 // 数据库表名常量
 export const TABLES = {

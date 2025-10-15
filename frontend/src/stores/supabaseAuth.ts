@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { supabase, type User, USER_ROLES } from '@/lib/supabase'
+import { supabase, isSupabaseConfigured, type User, USER_ROLES } from '@/lib/supabase'
 import type { AuthError, Session } from '@supabase/supabase-js'
 
 export interface LoginCredentials {
@@ -31,7 +31,7 @@ export const useSupabaseAuthStore = defineStore('supabaseAuth', () => {
       loading.value = true
       
       // 检查是否有有效的 Supabase 配置
-      if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+      if (!isSupabaseConfigured || !supabase) {
         console.warn('Supabase not configured, skipping auth initialization')
         return
       }
@@ -64,6 +64,11 @@ export const useSupabaseAuthStore = defineStore('supabaseAuth', () => {
 
   // 获取用户资料
   const fetchUserProfile = async (userId: string) => {
+    if (!supabase) {
+      console.warn('Supabase not configured, skipping user profile fetch')
+      return null
+    }
+    
     try {
       const { data, error: fetchError } = await supabase
         .from('users')
@@ -90,6 +95,11 @@ export const useSupabaseAuthStore = defineStore('supabaseAuth', () => {
 
   // 用户注册
   const register = async (registerData: RegisterData) => {
+    if (!supabase) {
+      error.value = 'Supabase not configured'
+      return { user: null, error: 'Authentication service not available' }
+    }
+    
     try {
       loading.value = true
       error.value = null
@@ -139,6 +149,11 @@ export const useSupabaseAuthStore = defineStore('supabaseAuth', () => {
 
   // 用户登录
   const login = async (credentials: LoginCredentials) => {
+    if (!supabase) {
+      error.value = 'Supabase not configured'
+      return { user: null, session: null, error: 'Authentication service not available' }
+    }
+    
     try {
       loading.value = true
       error.value = null
@@ -172,13 +187,15 @@ export const useSupabaseAuthStore = defineStore('supabaseAuth', () => {
       error.value = null
 
       // 尝试从 Supabase 登出，但即使失败也要清除本地状态
-      try {
-        const { error: logoutError } = await supabase.auth.signOut({ scope: 'local' })
-        if (logoutError) {
-          console.warn('Supabase 登出失败，但将继续清除本地状态:', logoutError.message)
+      if (supabase) {
+        try {
+          const { error: logoutError } = await supabase.auth.signOut({ scope: 'local' })
+          if (logoutError) {
+            console.warn('Supabase 登出失败，但将继续清除本地状态:', logoutError.message)
+          }
+        } catch (networkError: any) {
+          console.warn('网络错误，无法连接到 Supabase，但将继续清除本地状态:', networkError.message)
         }
-      } catch (networkError: any) {
-        console.warn('网络错误，无法连接到 Supabase，但将继续清除本地状态:', networkError.message)
       }
 
       // 无论如何都要清除本地状态
@@ -202,6 +219,11 @@ export const useSupabaseAuthStore = defineStore('supabaseAuth', () => {
 
   // 更新用户资料
   const updateProfile = async (updates: Partial<User>) => {
+    if (!supabase) {
+      error.value = 'Supabase not configured'
+      throw new Error('Authentication service not available')
+    }
+    
     try {
       loading.value = true
       error.value = null
@@ -229,6 +251,11 @@ export const useSupabaseAuthStore = defineStore('supabaseAuth', () => {
 
   // 重置密码
   const resetPassword = async (email: string) => {
+    if (!supabase) {
+      error.value = 'Supabase not configured'
+      throw new Error('Authentication service not available')
+    }
+    
     try {
       loading.value = true
       error.value = null
@@ -248,6 +275,11 @@ export const useSupabaseAuthStore = defineStore('supabaseAuth', () => {
 
   // 更新密码
   const updatePassword = async (newPassword: string) => {
+    if (!supabase) {
+      error.value = 'Supabase not configured'
+      throw new Error('Authentication service not available')
+    }
+    
     try {
       loading.value = true
       error.value = null

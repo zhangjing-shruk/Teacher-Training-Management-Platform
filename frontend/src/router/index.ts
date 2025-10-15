@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useSupabaseAuthStore } from '@/stores/supabaseAuth'
+import { isSupabaseConfigured } from '@/lib/supabase'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -135,12 +136,10 @@ router.beforeEach(async (to, from, next) => {
     // 初始化认证状态
     await authStore.initializeAuth()
     
-    // 检查是否有有效的 Supabase 配置
-    if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
-      // 如果没有 Supabase 配置，允许访问所有页面（开发/演示模式）
-      console.warn('Supabase not configured, allowing all routes')
-      next()
-      return
+    // 检查是否配置了 Supabase
+    if (!isSupabaseConfigured) {
+      console.warn('Supabase not configured, allowing access to all routes (demo mode)')
+      return next()
     }
     
     if (to.meta.requiresAuth && !authStore.isAuthenticated) {
