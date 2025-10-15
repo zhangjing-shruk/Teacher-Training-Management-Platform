@@ -20,7 +20,9 @@ class Settings(BaseSettings):
         "http://localhost:8001",
         "http://127.0.0.1:8001",
         "http://localhost",
-        "http://127.0.0.1"
+        "http://127.0.0.1",
+        "https://teacher-training-management-platform-tyu-9247hvun.vercel.app",
+        "https://*.vercel.app"
     ]
     
     # 可信主机配置 (不包含协议)
