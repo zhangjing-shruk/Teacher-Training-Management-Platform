@@ -206,8 +206,8 @@ export const useSupabaseAuthStore = defineStore('supabaseAuth', () => {
       loading.value = true
       error.value = null
 
-      // 尝试从 Supabase 登出，但即使失败也要清除本地状态
-      if (supabase) {
+      // 只有在有有效会话时才尝试从 Supabase 登出
+      if (supabase && session.value) {
         try {
           const { error: logoutError } = await supabase.auth.signOut({ scope: 'local' })
           if (logoutError) {
@@ -216,6 +216,8 @@ export const useSupabaseAuthStore = defineStore('supabaseAuth', () => {
         } catch (networkError: any) {
           console.warn('网络错误，无法连接到 Supabase，但将继续清除本地状态:', networkError.message)
         }
+      } else {
+        console.log('没有活跃会话，直接清除本地状态')
       }
 
       // 无论如何都要清除本地状态
@@ -225,6 +227,14 @@ export const useSupabaseAuthStore = defineStore('supabaseAuth', () => {
       // 清除本地存储中的会话信息
       localStorage.removeItem('supabase.auth.token')
       sessionStorage.removeItem('supabase.auth.token')
+      
+      // 清除所有 Supabase 相关的本地存储
+      const keys = Object.keys(localStorage)
+      keys.forEach(key => {
+        if (key.startsWith('sb-') || key.includes('supabase')) {
+          localStorage.removeItem(key)
+        }
+      })
       
     } catch (err: any) {
       error.value = err.message || '登出失败'

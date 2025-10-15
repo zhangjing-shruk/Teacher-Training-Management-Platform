@@ -16,28 +16,37 @@ const isLoading = ref(false)
 const errorMessage = ref<string | null>(null)
 
 const handleLogin = async () => {
-  if (!loginForm.value.email || !loginForm.value.password) {
-    errorMessage.value = '请填写邮箱和密码'
-    return
-  }
+  isLoading.value = true
+  errorMessage.value = null
 
   try {
-    isLoading.value = true
-    errorMessage.value = ''
-    
     await authStore.login(loginForm.value)
     
-    // 根据用户角色重定向
-    if (authStore.user?.role === 'manager') {
-      await router.push('/manager')
-    } else if (authStore.user?.role === 'teacher') {
-      await router.push('/teacher')
+    // 等待用户资料加载
+    let retries = 0
+    while (!authStore.user && retries < 10) {
+      await new Promise(resolve => setTimeout(resolve, 100))
+      retries++
     }
-  } catch (error: any) {
-    errorMessage.value = error.message || '登录失败，请重试'
+    
+    // 根据用户角色重定向
+    if (authStore.user) {
+      const redirectPath = authStore.user.role === 'manager' ? '/manager' : '/teacher'
+      router.push(redirectPath)
+    } else {
+      // 如果没有用户信息，默认跳转到教师界面
+      router.push('/teacher')
+    }
+  } catch (err: any) {
+    errorMessage.value = err.message || '登录失败，请重试'
   } finally {
     isLoading.value = false
   }
+}
+
+const fillTestAccount = (email: string, password: string) => {
+  loginForm.value.email = email
+  loginForm.value.password = password
 }
 
 
@@ -48,10 +57,12 @@ const handleLogin = async () => {
     <div class="max-w-md w-full space-y-8">
       <!-- Logo 和标题 -->
       <div class="text-center">
-        <div class="mx-auto h-16 w-16 bg-blue-500 rounded-lg flex items-center justify-center mb-4">
-          <svg class="h-8 w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
-          </svg>
+        <div class="mx-auto mb-4">
+          <img 
+            src="/51talkACADEMY-logo.jpeg" 
+            alt="51Talk Academy" 
+            class="h-16 w-auto mx-auto rounded-lg shadow-sm"
+          />
         </div>
         <h2 class="text-3xl font-bold text-gray-900">AI 教师培训平台</h2>
         <p class="mt-2 text-sm text-gray-600">请登录您的账户</p>
@@ -111,7 +122,32 @@ const handleLogin = async () => {
         </div>
       </div>
 
-
+      <!-- 测试账号 -->
+      <div class="bg-white rounded-lg shadow-lg p-6">
+        <h3 class="text-lg font-medium text-gray-900 mb-4 text-center">测试账号</h3>
+        <div class="grid grid-cols-2 gap-4">
+          <div class="text-center">
+            <h4 class="font-medium text-gray-700 mb-2">教师账号</h4>
+            <button
+              @click="fillTestAccount('teacher1@example.com', 'teacher123')"
+              class="w-full px-3 py-2 text-sm bg-green-50 text-green-700 border border-green-200 rounded-md hover:bg-green-100 transition-colors"
+            >
+              使用教师账号
+            </button>
+            <p class="text-xs text-gray-500 mt-1">teacher1@example.com</p>
+          </div>
+          <div class="text-center">
+            <h4 class="font-medium text-gray-700 mb-2">管理员账号</h4>
+            <button
+              @click="fillTestAccount('admin@example.com', 'admin123')"
+              class="w-full px-3 py-2 text-sm bg-blue-50 text-blue-700 border border-blue-200 rounded-md hover:bg-blue-100 transition-colors"
+            >
+              使用管理员账号
+            </button>
+            <p class="text-xs text-gray-500 mt-1">admin@example.com</p>
+          </div>
+        </div>
+      </div>
 
       <!-- 功能介绍 -->
       <div class="text-center text-sm text-gray-600">
