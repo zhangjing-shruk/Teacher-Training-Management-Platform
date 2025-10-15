@@ -1,5 +1,6 @@
 import { 
   supabase, 
+  isSupabaseConfigured,
   TABLES, 
   type TrainingMaterial, 
   type PracticeSession, 
@@ -10,11 +11,20 @@ import {
   MATERIAL_TYPES
 } from '@/lib/supabase'
 
+// 检查 Supabase 是否可用的辅助函数
+function ensureSupabaseAvailable() {
+  if (!supabase || !isSupabaseConfigured) {
+    throw new Error('Supabase service is not available. Please configure Supabase environment variables.')
+  }
+  return supabase
+}
+
 // 培训资料服务
 export class TrainingMaterialService {
   // 获取所有培训资料
   static async getAll() {
-    const { data, error } = await supabase
+    const client = ensureSupabaseAvailable()
+    const { data, error } = await client
       .from(TABLES.TRAINING_MATERIALS)
       .select('*')
       .order('created_at', { ascending: false })
@@ -25,7 +35,8 @@ export class TrainingMaterialService {
 
   // 根据ID获取培训资料
   static async getById(id: string) {
-    const { data, error } = await supabase
+    const client = ensureSupabaseAvailable()
+    const { data, error } = await client
       .from(TABLES.TRAINING_MATERIALS)
       .select('*')
       .eq('id', id)
@@ -37,7 +48,8 @@ export class TrainingMaterialService {
 
   // 创建培训资料（管理员）
   static async create(material: Omit<TrainingMaterial, 'id' | 'created_at' | 'updated_at' | 'download_count'>) {
-    const { data, error } = await supabase
+    const client = ensureSupabaseAvailable()
+    const { data, error } = await client
       .from(TABLES.TRAINING_MATERIALS)
       .insert({
         ...material,
@@ -50,9 +62,10 @@ export class TrainingMaterialService {
     return data as TrainingMaterial
   }
 
-  // 更新培训资料（管理员）
+  // 更新培训资料
   static async update(id: string, updates: Partial<TrainingMaterial>) {
-    const { data, error } = await supabase
+    const client = ensureSupabaseAvailable()
+    const { data, error } = await client
       .from(TABLES.TRAINING_MATERIALS)
       .update(updates)
       .eq('id', id)
@@ -63,9 +76,10 @@ export class TrainingMaterialService {
     return data as TrainingMaterial
   }
 
-  // 删除培训资料（管理员）
+  // 删除培训资料
   static async delete(id: string) {
-    const { error } = await supabase
+    const client = ensureSupabaseAvailable()
+    const { error } = await client
       .from(TABLES.TRAINING_MATERIALS)
       .delete()
       .eq('id', id)
@@ -75,10 +89,8 @@ export class TrainingMaterialService {
 
   // 增加下载次数
   static async incrementDownloadCount(id: string) {
-    const { error } = await supabase.rpc('increment_download_count', {
-      material_id: id
-    })
-
+    const client = ensureSupabaseAvailable()
+    const { error } = await client.rpc('increment_download_count', { material_id: id })
     if (error) throw error
   }
 }
@@ -87,7 +99,8 @@ export class TrainingMaterialService {
 export class LearningProgressService {
   // 获取用户学习进度
   static async getUserProgress(userId: string) {
-    const { data, error } = await supabase
+    const client = ensureSupabaseAvailable()
+    const { data, error } = await client
       .from(TABLES.LEARNING_PROGRESS)
       .select(`
         *,
@@ -103,12 +116,13 @@ export class LearningProgressService {
       .order('created_at', { ascending: false })
 
     if (error) throw error
-    return data
+    return data as (LearningProgress & { training_materials: TrainingMaterial })[]
   }
 
   // 开始学习
   static async startLearning(userId: string, materialId: string) {
-    const { data, error } = await supabase
+    const client = ensureSupabaseAvailable()
+    const { data, error } = await client
       .from(TABLES.LEARNING_PROGRESS)
       .insert({
         user_id: userId,
@@ -126,17 +140,17 @@ export class LearningProgressService {
 
   // 更新学习进度
   static async updateProgress(userId: string, materialId: string, progressPercentage: number) {
-    const updates: any = {
+    const client = ensureSupabaseAvailable()
+    const updates: Partial<LearningProgress> = {
       progress_percentage: progressPercentage
     }
 
-    // 如果进度达到100%，标记为完成
     if (progressPercentage >= 100) {
       updates.status = TRAINING_STATUS.COMPLETED
       updates.completed_at = new Date().toISOString()
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await client
       .from(TABLES.LEARNING_PROGRESS)
       .update(updates)
       .eq('user_id', userId)
@@ -150,7 +164,8 @@ export class LearningProgressService {
 
   // 完成学习
   static async completeLearning(userId: string, materialId: string) {
-    const { data, error } = await supabase
+    const client = ensureSupabaseAvailable()
+    const { data, error } = await client
       .from(TABLES.LEARNING_PROGRESS)
       .update({
         status: TRAINING_STATUS.COMPLETED,
@@ -171,7 +186,8 @@ export class LearningProgressService {
 export class PracticeSessionService {
   // 获取用户练习会话
   static async getUserSessions(userId: string) {
-    const { data, error } = await supabase
+    const client = ensureSupabaseAvailable()
+    const { data, error } = await client
       .from(TABLES.PRACTICE_SESSIONS)
       .select('*')
       .eq('user_id', userId)
@@ -183,7 +199,8 @@ export class PracticeSessionService {
 
   // 根据ID获取练习会话
   static async getById(id: string) {
-    const { data, error } = await supabase
+    const client = ensureSupabaseAvailable()
+    const { data, error } = await client
       .from(TABLES.PRACTICE_SESSIONS)
       .select('*')
       .eq('id', id)
@@ -195,11 +212,11 @@ export class PracticeSessionService {
 
   // 创建练习会话
   static async create(session: Omit<PracticeSession, 'id' | 'created_at' | 'updated_at'>) {
-    const { data, error } = await supabase
+    const client = ensureSupabaseAvailable()
+    const { data, error } = await client
       .from(TABLES.PRACTICE_SESSIONS)
       .insert({
         ...session,
-        status: PRACTICE_STATUS.ACTIVE,
         started_at: new Date().toISOString()
       })
       .select()
@@ -211,7 +228,8 @@ export class PracticeSessionService {
 
   // 更新练习会话
   static async update(id: string, updates: Partial<PracticeSession>) {
-    const { data, error } = await supabase
+    const client = ensureSupabaseAvailable()
+    const { data, error } = await client
       .from(TABLES.PRACTICE_SESSIONS)
       .update(updates)
       .eq('id', id)
@@ -224,7 +242,8 @@ export class PracticeSessionService {
 
   // 完成练习会话
   static async complete(id: string) {
-    const { data, error } = await supabase
+    const client = ensureSupabaseAvailable()
+    const { data, error } = await client
       .from(TABLES.PRACTICE_SESSIONS)
       .update({
         status: PRACTICE_STATUS.COMPLETED,
@@ -240,10 +259,8 @@ export class PracticeSessionService {
 
   // 获取用户练习统计
   static async getUserStats(userId: string) {
-    const { data, error } = await supabase.rpc('get_user_practice_stats', {
-      user_id: userId
-    })
-
+    const client = ensureSupabaseAvailable()
+    const { data, error } = await client.rpc('get_user_practice_stats', { user_id: userId })
     if (error) throw error
     return data
   }
@@ -251,9 +268,10 @@ export class PracticeSessionService {
 
 // 反馈服务
 export class FeedbackService {
-  // 获取会话反馈
+  // 根据会话获取反馈
   static async getBySession(sessionId: string) {
-    const { data, error } = await supabase
+    const client = ensureSupabaseAvailable()
+    const { data, error } = await client
       .from(TABLES.FEEDBACK)
       .select('*')
       .eq('session_id', sessionId)
@@ -263,9 +281,10 @@ export class FeedbackService {
     return data as Feedback[]
   }
 
-  // 获取用户反馈
+  // 根据用户获取反馈
   static async getByUser(userId: string) {
-    const { data, error } = await supabase
+    const client = ensureSupabaseAvailable()
+    const { data, error } = await client
       .from(TABLES.FEEDBACK)
       .select(`
         *,
@@ -279,12 +298,13 @@ export class FeedbackService {
       .order('created_at', { ascending: false })
 
     if (error) throw error
-    return data
+    return data as (Feedback & { practice_sessions: PracticeSession })[]
   }
 
   // 创建反馈
   static async create(feedback: Omit<Feedback, 'id' | 'created_at' | 'updated_at'>) {
-    const { data, error } = await supabase
+    const client = ensureSupabaseAvailable()
+    const { data, error } = await client
       .from(TABLES.FEEDBACK)
       .insert(feedback)
       .select()
@@ -296,7 +316,8 @@ export class FeedbackService {
 
   // 更新反馈
   static async update(id: string, updates: Partial<Feedback>) {
-    const { data, error } = await supabase
+    const client = ensureSupabaseAvailable()
+    const { data, error } = await client
       .from(TABLES.FEEDBACK)
       .update(updates)
       .eq('id', id)
@@ -309,7 +330,8 @@ export class FeedbackService {
 
   // 删除反馈
   static async delete(id: string) {
-    const { error } = await supabase
+    const client = ensureSupabaseAvailable()
+    const { error } = await client
       .from(TABLES.FEEDBACK)
       .delete()
       .eq('id', id)
@@ -320,27 +342,26 @@ export class FeedbackService {
 
 // 管理员统计服务
 export class AdminStatsService {
-  // 获取所有用户练习统计
+  // 获取所有用户统计
   static async getAllUserStats() {
-    const { data, error } = await supabase.rpc('get_admin_practice_stats')
-
+    const client = ensureSupabaseAvailable()
+    const { data, error } = await client.rpc('get_all_user_stats')
     if (error) throw error
     return data
   }
 
-  // 获取资料学习统计
+  // 获取资料统计
   static async getMaterialStats(materialId: string) {
-    const { data, error } = await supabase.rpc('get_material_learning_stats', {
-      material_id: materialId
-    })
-
+    const client = ensureSupabaseAvailable()
+    const { data, error } = await client.rpc('get_material_stats', { material_id: materialId })
     if (error) throw error
     return data
   }
 
   // 获取所有反馈
   static async getAllFeedback() {
-    const { data, error } = await supabase
+    const client = ensureSupabaseAvailable()
+    const { data, error } = await client
       .from(TABLES.FEEDBACK)
       .select(`
         *,
