@@ -115,12 +115,12 @@
               </div>
               <div>
                 <span class="font-medium text-gray-700">后端地址:</span>
-                <span class="text-gray-600 ml-2">http://localhost:8001</span>
+                <span class="text-gray-600 ml-2">http://localhost:8000</span>
               </div>
               <div>
                 <span class="font-medium text-gray-700">API文档:</span>
-                <a href="http://localhost:8001/docs" target="_blank" class="text-blue-600 hover:text-blue-800 ml-2">
-                  http://localhost:8001/docs
+                <a href="http://localhost:8000/docs" target="_blank" class="text-blue-600 hover:text-blue-800 ml-2">
+                  http://localhost:8000/docs
                 </a>
               </div>
               <div>
@@ -145,7 +145,7 @@ const dbStatus = ref<{success: boolean, message: string, data?: any} | null>(nul
 const testBackendConnection = async () => {
   loading.value = true
   try {
-    const response = await fetch('http://localhost:8001/')
+    const response = await fetch('http://localhost:8000/')
     const data = await response.json()
     
     backendStatus.value = {
@@ -166,7 +166,7 @@ const testBackendConnection = async () => {
 const testDatabase = async () => {
   loading.value = true
   try {
-    const response = await fetch('http://localhost:8001/health')
+    const response = await fetch('http://localhost:8000/health')
     const data = await response.json()
     
     dbStatus.value = {

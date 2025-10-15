@@ -528,7 +528,7 @@ const previewMaterial = (material: Material) => {
   }
   
   // 构建完整的文件URL
-  const fileUrl = `http://localhost:8001${material.fileUrl}`
+  const fileUrl = `http://localhost:8000${material.fileUrl}`
   
   // 根据文件类型决定预览方式
   const fileExtension = material.fileUrl.split('.').pop()?.toLowerCase()
@@ -559,7 +559,7 @@ const downloadMaterial = async (material: Material) => {
   
   try {
     // 构建完整的文件URL
-    const fileUrl = `http://localhost:8001${material.fileUrl}`
+    const fileUrl = `http://localhost:8000${material.fileUrl}`
     
     // 创建一个临时的a标签来触发下载
     const link = document.createElement('a')
