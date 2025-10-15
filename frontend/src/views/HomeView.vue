@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
-import type { LoginCredentials } from '@/types/auth'
+import { useSupabaseAuthStore } from '@/stores/supabaseAuth'
+import type { LoginCredentials } from '@/stores/supabaseAuth'
 
 const router = useRouter()
-const authStore = useAuthStore()
+const authStore = useSupabaseAuthStore()
 
 const loginForm = ref<LoginCredentials>({
   email: '',
@@ -28,7 +28,7 @@ const handleLogin = async () => {
     await authStore.login(loginForm.value)
     
     // 根据用户角色重定向
-    if (authStore.user?.role === 'admin') {
+    if (authStore.user?.role === 'manager') {
       await router.push('/manager')
     } else if (authStore.user?.role === 'teacher') {
       await router.push('/teacher')
@@ -40,10 +40,7 @@ const handleLogin = async () => {
   }
 }
 
-const fillTestAccount = (email: string, password: string) => {
-  loginForm.value.email = email
-  loginForm.value.password = password
-}
+
 </script>
 
 <template>
@@ -99,36 +96,22 @@ const fillTestAccount = (email: string, password: string) => {
             {{ isLoading ? '登录中...' : '登录' }}
           </button>
         </form>
-      </div>
-
-      <!-- 测试账号 -->
-      <div class="bg-white rounded-lg shadow-lg p-6">
-        <h3 class="text-lg font-medium text-gray-900 mb-4 text-center">测试账号</h3>
-        <div class="grid grid-cols-2 gap-4">
-          <div class="text-center">
-            <h4 class="font-medium text-gray-700 mb-2">教师账户</h4>
-            <p class="text-sm text-gray-600 mb-2">teacher1@example.com</p>
-            <p class="text-sm text-gray-600 mb-3">teacher123</p>
-            <button
-              @click="fillTestAccount('teacher1@example.com', 'teacher123')"
-              class="w-full px-4 py-2 bg-blue-500 text-white text-sm rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
+        
+        <!-- 注册链接 -->
+        <div class="text-center mt-4">
+          <p class="text-sm text-gray-600">
+            还没有账户？
+            <router-link 
+              to="/register" 
+              class="font-medium text-blue-500 hover:text-blue-600 focus:outline-none focus:underline"
             >
-              一键填入
-            </button>
-          </div>
-          <div class="text-center">
-            <h4 class="font-medium text-gray-700 mb-2">管理员账户</h4>
-            <p class="text-sm text-gray-600 mb-2">admin@example.com</p>
-            <p class="text-sm text-gray-600 mb-3">admin123</p>
-            <button
-              @click="fillTestAccount('admin@example.com', 'admin123')"
-              class="w-full px-4 py-2 bg-blue-500 text-white text-sm rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
-            >
-              一键填入
-            </button>
-          </div>
+              立即注册
+            </router-link>
+          </p>
         </div>
       </div>
+
+
 
       <!-- 功能介绍 -->
       <div class="text-center text-sm text-gray-600">

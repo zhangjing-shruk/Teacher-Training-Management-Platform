@@ -2,13 +2,31 @@ import type { LoginCredentials, AuthResponse, User } from '@/types/auth'
 
 // 检查是否有有效的API配置
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+
+// 在生产环境中，如果没有设置 VITE_API_BASE_URL，则禁用 API 调用
+// 在开发环境中，允许使用 localhost
+const isProduction = import.meta.env.PROD
+const isDevelopment = import.meta.env.DEV
+
 const isValidApiUrl = API_BASE_URL && 
   !API_BASE_URL.includes('your-backend-domain') && 
-  !API_BASE_URL.includes('placeholder')
+  !API_BASE_URL.includes('placeholder') &&
+  !API_BASE_URL.includes('example.com') &&
+  // 在生产环境中，不允许使用 localhost
+  (!isProduction || !API_BASE_URL.includes('localhost'))
+
+// 输出当前API配置信息
+console.log('Environment:', isProduction ? 'production' : 'development')
+console.log('API Base URL:', API_BASE_URL)
+console.log('Is Valid API URL:', isValidApiUrl)
 
 // 如果没有有效的API配置，输出警告
 if (!isValidApiUrl) {
-  console.warn('Backend API not configured or using placeholder URL. API calls will be disabled.')
+  if (isProduction) {
+    console.warn('Backend API not configured for production. Please set VITE_API_BASE_URL environment variable in Vercel.')
+  } else {
+    console.warn('Backend API not configured or using placeholder URL. API calls will be disabled.')
+  }
 }
 
 // HTTP客户端配置
@@ -25,7 +43,11 @@ class ApiClient {
   ): Promise<T> {
     // 如果没有有效的API配置，抛出友好的错误
     if (!isValidApiUrl) {
-      throw new Error('Backend API is not configured. Please set up the backend service or configure environment variables.')
+      if (isProduction) {
+        throw new Error('服务暂时不可用，请稍后再试。如果问题持续存在，请联系管理员。')
+      } else {
+        throw new Error('Backend API is not configured. Please set up the backend service or configure environment variables.')
+      }
     }
 
     const url = `${this.baseURL}${endpoint}`

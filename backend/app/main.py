@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.middleware.trustedhost import TrustedHostMiddleware
+# from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.staticfiles import StaticFiles
 import os
 
@@ -31,11 +31,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 可信主机中间件
-app.add_middleware(
-    TrustedHostMiddleware,
-    allowed_hosts=settings.ALLOWED_HOSTS
-)
+# 可信主机中间件 (开发环境中暂时禁用)
+# app.add_middleware(
+#     TrustedHostMiddleware,
+#     allowed_hosts=settings.ALLOWED_HOSTS
+# )
 
 # 静态文件服务
 uploads_dir = "uploads"

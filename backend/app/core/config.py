@@ -27,6 +27,8 @@ class Settings(BaseSettings):
     ALLOWED_HOSTS: List[str] = [
         "localhost:5173", 
         "127.0.0.1:5173",
+        "localhost:8000",
+        "127.0.0.1:8000",
         "localhost:8001",
         "127.0.0.1:8001",
         "localhost",
