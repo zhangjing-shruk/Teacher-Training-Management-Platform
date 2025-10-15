@@ -206,18 +206,31 @@ export const useSupabaseAuthStore = defineStore('supabaseAuth', () => {
       loading.value = true
       error.value = null
 
-      // 只有在有有效会话时才尝试从 Supabase 登出
-      if (supabase && session.value) {
+      // 检查是否有有效的 Supabase 实例和会话
+      const hasValidSession = supabase && session.value && session.value.access_token
+      
+      if (hasValidSession && supabase) {
         try {
-          const { error: logoutError } = await supabase.auth.signOut({ scope: 'local' })
+          // 添加超时控制，避免长时间等待
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('登出请求超时')), 5000)
+          })
+          
+          const logoutPromise = supabase.auth.signOut({ scope: 'local' })
+          
+          const { error: logoutError } = await Promise.race([logoutPromise, timeoutPromise]) as any
+          
           if (logoutError) {
             console.warn('Supabase 登出失败，但将继续清除本地状态:', logoutError.message)
+          } else {
+            console.log('Supabase 登出成功')
           }
         } catch (networkError: any) {
-          console.warn('网络错误，无法连接到 Supabase，但将继续清除本地状态:', networkError.message)
+          // 捕获所有网络相关错误，包括 ERR_ABORTED
+          console.warn('登出请求失败（可能是网络问题），继续清除本地状态:', networkError.message)
         }
       } else {
-        console.log('没有活跃会话，直接清除本地状态')
+        console.log('没有有效会话或 Supabase 实例，直接清除本地状态')
       }
 
       // 无论如何都要清除本地状态
@@ -225,16 +238,30 @@ export const useSupabaseAuthStore = defineStore('supabaseAuth', () => {
       session.value = null
       
       // 清除本地存储中的会话信息
-      localStorage.removeItem('supabase.auth.token')
-      sessionStorage.removeItem('supabase.auth.token')
-      
-      // 清除所有 Supabase 相关的本地存储
-      const keys = Object.keys(localStorage)
-      keys.forEach(key => {
-        if (key.startsWith('sb-') || key.includes('supabase')) {
-          localStorage.removeItem(key)
-        }
-      })
+      try {
+        localStorage.removeItem('supabase.auth.token')
+        sessionStorage.removeItem('supabase.auth.token')
+        
+        // 清除所有 Supabase 相关的本地存储
+        const keys = Object.keys(localStorage)
+        keys.forEach(key => {
+          if (key.startsWith('sb-') || key.includes('supabase')) {
+            localStorage.removeItem(key)
+          }
+        })
+        
+        // 清除 sessionStorage 中的 Supabase 数据
+        const sessionKeys = Object.keys(sessionStorage)
+        sessionKeys.forEach(key => {
+          if (key.startsWith('sb-') || key.includes('supabase')) {
+            sessionStorage.removeItem(key)
+          }
+        })
+        
+        console.log('本地状态清除完成')
+      } catch (storageError: any) {
+        console.warn('清除本地存储时出现错误:', storageError.message)
+      }
       
     } catch (err: any) {
       error.value = err.message || '登出失败'
