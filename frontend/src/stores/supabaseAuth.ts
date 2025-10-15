@@ -30,6 +30,12 @@ export const useSupabaseAuthStore = defineStore('supabaseAuth', () => {
     try {
       loading.value = true
       
+      // 检查是否有有效的 Supabase 配置
+      if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+        console.warn('Supabase not configured, skipping auth initialization')
+        return
+      }
+      
       // 获取当前会话
       const { data: { session: currentSession } } = await supabase.auth.getSession()
       
