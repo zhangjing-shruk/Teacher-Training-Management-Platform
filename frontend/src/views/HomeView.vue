@@ -44,10 +44,7 @@ const handleLogin = async () => {
   }
 }
 
-const fillTestAccount = (email: string, password: string) => {
-  loginForm.value.email = email
-  loginForm.value.password = password
-}
+
 
 
 </script>
@@ -122,32 +119,7 @@ const fillTestAccount = (email: string, password: string) => {
         </div>
       </div>
 
-      <!-- 测试账号 -->
-      <div class="bg-white rounded-lg shadow-lg p-6">
-        <h3 class="text-lg font-medium text-gray-900 mb-4 text-center">测试账号</h3>
-        <div class="grid grid-cols-2 gap-4">
-          <div class="text-center">
-            <h4 class="font-medium text-gray-700 mb-2">教师账号</h4>
-            <button
-              @click="fillTestAccount('teacher1@example.com', 'teacher123')"
-              class="w-full px-3 py-2 text-sm bg-green-50 text-green-700 border border-green-200 rounded-md hover:bg-green-100 transition-colors"
-            >
-              使用教师账号
-            </button>
-            <p class="text-xs text-gray-500 mt-1">teacher1@example.com</p>
-          </div>
-          <div class="text-center">
-            <h4 class="font-medium text-gray-700 mb-2">管理员账号</h4>
-            <button
-              @click="fillTestAccount('admin@example.com', 'admin123')"
-              class="w-full px-3 py-2 text-sm bg-blue-50 text-blue-700 border border-blue-200 rounded-md hover:bg-blue-100 transition-colors"
-            >
-              使用管理员账号
-            </button>
-            <p class="text-xs text-gray-500 mt-1">admin@example.com</p>
-          </div>
-        </div>
-      </div>
+
 
       <!-- 功能介绍 -->
       <div class="text-center text-sm text-gray-600">

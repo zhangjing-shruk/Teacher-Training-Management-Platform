@@ -12,6 +12,8 @@ from app.api.learning_progress import router as learning_progress_router
 from app.api.supabase_auth import router as supabase_auth_router
 from app.api.supabase_training import router as supabase_training_router
 from app.api.supabase_practice import router as supabase_practice_router
+# 临时清理接口
+from app.api.cleanup import router as cleanup_router
 from app.core.config import settings
 
 app = FastAPI(
@@ -53,6 +55,9 @@ app.include_router(learning_progress_router, prefix="/api/learning-progress", ta
 app.include_router(supabase_auth_router, prefix="/api/supabase-auth", tags=["Supabase认证"])
 app.include_router(supabase_training_router, prefix="/api/supabase-training", tags=["Supabase培训"])
 app.include_router(supabase_practice_router, prefix="/api/supabase-practice", tags=["Supabase练习"])
+
+# 临时清理接口 (⚠️ 仅用于开发和测试环境)
+app.include_router(cleanup_router, prefix="/api/cleanup", tags=["临时清理接口"])
 
 @app.get("/")
 async def root():
