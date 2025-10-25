@@ -1,0 +1,9 @@
+# 排除后端目录，只部署前端
+backend/
+*.py
+*.sql
+*.md
+!frontend/
+!vercel.json
+!package.json
+!package-lock.json
