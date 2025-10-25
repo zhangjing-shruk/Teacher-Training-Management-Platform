@@ -327,7 +327,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
@@ -355,94 +355,21 @@ interface Lecture {
   reviewedAt?: string
 }
 
-// 虚拟数据
-const lectures = ref<Lecture[]>([
-  {
-    id: 1,
-    teacherName: '张小明',
-    teacherId: 1,
-    attemptNumber: 1,
-    status: 'pending_review',
-    submittedAt: '2024-01-15T10:30:00',
-    videoUrl: '/videos/lecture_1.mp4',
-    aiScore: 78,
-    aiAnalysis: {
-      pronunciation: 16,
-      fluency: 15,
-      energy: 17,
-      content: 15,
-      interaction: 15
-    },
-    aiSuggestions: '发音清晰，建议在互动环节增加更多提问，提高学生参与度。'
-  },
-  {
-    id: 2,
-    teacherName: '李小红',
-    teacherId: 2,
-    attemptNumber: 2,
-    status: 'processing',
-    submittedAt: '2024-01-15T14:20:00',
-    videoUrl: '/videos/lecture_2.mp4'
-  },
-  {
-    id: 3,
-    teacherName: '王小华',
-    teacherId: 3,
-    attemptNumber: 1,
-    status: 'passed',
-    submittedAt: '2024-01-14T16:45:00',
-    videoUrl: '/videos/lecture_3.mp4',
-    aiScore: 85,
-    aiAnalysis: {
-      pronunciation: 18,
-      fluency: 17,
-      energy: 16,
-      content: 17,
-      interaction: 17
-    },
-    aiSuggestions: '整体表现优秀，语言流畅，互动自然。',
-    managerFeedback: '试讲表现优秀，语言表达清晰，课堂互动良好，通过培训。',
-    reviewedAt: '2024-01-14T18:00:00'
-  },
-  {
-    id: 4,
-    teacherName: '刘小强',
-    teacherId: 4,
-    attemptNumber: 3,
-    status: 'failed',
-    submittedAt: '2024-01-13T11:15:00',
-    videoUrl: '/videos/lecture_4.mp4',
-    aiScore: 62,
-    aiAnalysis: {
-      pronunciation: 12,
-      fluency: 11,
-      energy: 13,
-      content: 13,
-      interaction: 13
-    },
-    aiSuggestions: '需要提高发音清晰度和语言流畅度，建议多练习基础发音。',
-    managerFeedback: '发音需要改进，建议继续练习后重新提交。',
-    reviewedAt: '2024-01-13T15:30:00'
-  },
-  {
-    id: 5,
-    teacherName: '陈小美',
-    teacherId: 5,
-    attemptNumber: 1,
-    status: 'pending_review',
-    submittedAt: '2024-01-12T09:00:00',
-    videoUrl: '/videos/lecture_5.mp4',
-    aiScore: 72,
-    aiAnalysis: {
-      pronunciation: 14,
-      fluency: 14,
-      energy: 15,
-      content: 14,
-      interaction: 15
-    },
-    aiSuggestions: '表现良好，建议在内容讲解时增加更多实例。'
+// 试讲数据
+const lectures = ref<Lecture[]>([])
+
+// 加载试讲数据
+const loadLectures = async () => {
+  try {
+    // TODO: 调用API获取试讲数据
+    // const response = await fetch('/api/manager/lectures')
+    // const data = await response.json()
+    // lectures.value = data
+    console.log('加载试讲数据')
+  } catch (error) {
+    console.error('加载试讲数据失败:', error)
   }
-])
+}
 
 const searchQuery = ref('')
 const statusFilter = ref('')
@@ -558,4 +485,9 @@ const submitReview = () => {
   showReviewModal.value = false
   alert('评审提交成功！')
 }
+
+// 生命周期
+onMounted(() => {
+  loadLectures()
+})
 </script>

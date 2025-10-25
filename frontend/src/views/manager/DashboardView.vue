@@ -100,24 +100,62 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 
-// 模拟数据
-const stats = ref({
-  totalTeachers: 156,
-  completedTraining: 89,
-  inProgressTraining: 45,
-  pendingReviews: 12
+// 统计数据接口
+interface Stats {
+  totalTeachers: number
+  completedTraining: number
+  inProgressTraining: number
+  pendingReviews: number
+}
+
+// 活动数据接口
+interface Activity {
+  id: number
+  description: string
+  time: string
+}
+
+// 数据状态
+const stats = ref<Stats>({
+  totalTeachers: 0,
+  completedTraining: 0,
+  inProgressTraining: 0,
+  pendingReviews: 0
 })
 
-const recentActivities = ref([
-  { id: 1, description: '张老师完成了试讲练习', time: '2小时前' },
-  { id: 2, description: '李老师提交了讲座视频', time: '4小时前' },
-  { id: 3, description: '王老师开始了SOP学习', time: '6小时前' },
-  { id: 4, description: '新增培训资料：《课堂互动技巧》', time: '1天前' },
-  { id: 5, description: '陈老师通过了培训考核', time: '2天前' }
-])
+const recentActivities = ref<Activity[]>([])
 
-// TODO: 实现真实的数据获取
-// TODO: 添加数据刷新功能
+// 加载统计数据
+const loadStats = async () => {
+  try {
+    // TODO: 调用API获取统计数据
+    // const response = await fetch('/api/manager/stats')
+    // const data = await response.json()
+    // stats.value = data
+    console.log('加载统计数据')
+  } catch (error) {
+    console.error('加载统计数据失败:', error)
+  }
+}
+
+// 加载最近活动
+const loadRecentActivities = async () => {
+  try {
+    // TODO: 调用API获取最近活动
+    // const response = await fetch('/api/manager/activities')
+    // const data = await response.json()
+    // recentActivities.value = data
+    console.log('加载最近活动')
+  } catch (error) {
+    console.error('加载最近活动失败:', error)
+  }
+}
+
+// 生命周期
+onMounted(() => {
+  loadStats()
+  loadRecentActivities()
+})
 </script>

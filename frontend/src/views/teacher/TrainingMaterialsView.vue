@@ -454,8 +454,6 @@ const toggleDescription = (materialId: number) => {
 
 // 操作函数
 const startLearning = async (material: TrainingMaterial) => {
-  if ((material.status || 'not_started') === 'completed') return
-  
   try {
     // 更新学习状态
     material.status = 'in_progress'
@@ -467,36 +465,35 @@ const startLearning = async (material: TrainingMaterial) => {
       return
     }
     
-    // 直接打开文件URL
-    let fullUrl = fileUrl
-    if (fileUrl.startsWith('https://example.com/')) {
-      // 这是测试数据，显示提示
-      alert('这是测试资料，实际使用时会打开真实的文件链接')
-      return
-    }
-    
     // 打开文件
-    window.open(fullUrl, '_blank')
+    window.open(fileUrl, '_blank')
     
-    // 简单的进度模拟（实际项目中应该使用真实的学习进度跟踪）
-    setTimeout(() => {
-      material.progress = 50
-    }, 2000)
+    // TODO: 实现真实的学习进度跟踪
+    // 应该通过API记录学习开始时间和进度
+    console.log('开始学习:', material.title, '文件URL:', fileUrl)
     
-    setTimeout(() => {
-      material.status = 'completed'
-      material.progress = 100
-      console.log('学习完成:', material.title)
-    }, 5000)
+    // 记录学习开始
+    await recordLearningStart(material.id.toString())
     
-    console.log('开始学习:', material.title, '文件URL:', fullUrl)
   } catch (err) {
     console.error('开始学习失败:', err)
     alert('开始学习失败，请重试')
   }
 }
 
-
+// 记录学习开始
+const recordLearningStart = async (materialId: string) => {
+  try {
+    // TODO: 调用API记录学习开始
+    // const response = await fetch('/api/teacher/learning/start', {
+    //   method: 'POST',
+    //   body: JSON.stringify({ materialId })
+    // })
+    console.log('记录学习开始:', materialId)
+  } catch (error) {
+    console.error('记录学习开始失败:', error)
+  }
+}
 </script>
 
 <style scoped>

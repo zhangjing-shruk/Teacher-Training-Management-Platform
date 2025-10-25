@@ -232,7 +232,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 
 interface Analytics {
   activeTeachers: number
@@ -264,59 +264,76 @@ interface Performance {
   storageTotal: number
 }
 
-// 虚拟数据
+// 分析数据
 const analytics = ref<Analytics>({
-  activeTeachers: 89,
-  completedLectures: 234,
-  averageScore: 8.7,
-  averageDuration: 25
+  activeTeachers: 0,
+  completedLectures: 0,
+  averageScore: 0,
+  averageDuration: 0
 })
 
-const topTeachers = ref<Teacher[]>([
-  { id: 1, name: '张老师', subject: '英语', score: 9.5, lectureCount: 12 },
-  { id: 2, name: '李老师', subject: '数学', score: 9.3, lectureCount: 8 },
-  { id: 3, name: '王老师', subject: '语文', score: 9.1, lectureCount: 15 },
-  { id: 4, name: '刘老师', subject: '物理', score: 8.9, lectureCount: 6 },
-  { id: 5, name: '陈老师', subject: '化学', score: 8.7, lectureCount: 10 }
-])
+const topTeachers = ref<Teacher[]>([])
 
-const recentActivities = ref<Activity[]>([
-  {
-    id: 1,
-    type: 'lecture',
-    title: '张老师完成讲座',
-    description: '英语发音技巧训练',
-    timestamp: '2024-01-15T10:30:00'
-  },
-  {
-    id: 2,
-    type: 'review',
-    title: '李老师讲座已评审',
-    description: '数学教学方法改进',
-    timestamp: '2024-01-15T09:15:00'
-  },
-  {
-    id: 3,
-    type: 'upload',
-    title: '新培训资料上传',
-    description: '课堂互动技巧指南',
-    timestamp: '2024-01-15T08:45:00'
-  },
-  {
-    id: 4,
-    type: 'login',
-    title: '王老师登录系统',
-    description: '开始新的培训课程',
-    timestamp: '2024-01-15T08:00:00'
-  }
-])
+const recentActivities = ref<Activity[]>([])
 
 const performance = ref<Performance>({
-  responseTime: 245,
-  uptime: 99.8,
-  storageUsed: 156,
-  storageTotal: 500
+  responseTime: 0,
+  uptime: 0,
+  storageUsed: 0,
+  storageTotal: 0
 })
+
+// 加载分析数据
+const loadAnalytics = async () => {
+  try {
+    // TODO: 调用API获取分析数据
+    // const response = await fetch('/api/manager/analytics')
+    // const data = await response.json()
+    // analytics.value = data
+    console.log('加载分析数据')
+  } catch (error) {
+    console.error('加载分析数据失败:', error)
+  }
+}
+
+// 加载顶级教师数据
+const loadTopTeachers = async () => {
+  try {
+    // TODO: 调用API获取顶级教师数据
+    // const response = await fetch('/api/manager/top-teachers')
+    // const data = await response.json()
+    // topTeachers.value = data
+    console.log('加载顶级教师数据')
+  } catch (error) {
+    console.error('加载顶级教师数据失败:', error)
+  }
+}
+
+// 加载最近活动数据
+const loadRecentActivities = async () => {
+  try {
+    // TODO: 调用API获取最近活动数据
+    // const response = await fetch('/api/manager/recent-activities')
+    // const data = await response.json()
+    // recentActivities.value = data
+    console.log('加载最近活动数据')
+  } catch (error) {
+    console.error('加载最近活动数据失败:', error)
+  }
+}
+
+// 加载性能数据
+const loadPerformance = async () => {
+  try {
+    // TODO: 调用API获取性能数据
+    // const response = await fetch('/api/manager/performance')
+    // const data = await response.json()
+    // performance.value = data
+    console.log('加载性能数据')
+  } catch (error) {
+    console.error('加载性能数据失败:', error)
+  }
+}
 
 const timeRange = ref('30d')
 
@@ -368,4 +385,12 @@ const formatTime = (timestamp: string) => {
 const exportData = () => {
   alert(`导出${timeRange.value}的数据报告\n包含：\n- 教师活动统计\n- 讲座完成情况\n- 系统性能指标\n- 详细分析报告`)
 }
+
+// 组件挂载时加载数据
+onMounted(() => {
+  loadAnalytics()
+  loadTopTeachers()
+  loadRecentActivities()
+  loadPerformance()
+})
 </script>

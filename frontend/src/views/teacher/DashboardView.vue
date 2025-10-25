@@ -187,36 +187,25 @@
 import { ref, onMounted } from 'vue'
 import type { TrainingStatus } from '@/types/auth'
 
-// 模拟培训状态数据
+// 定义活动类型
+interface Activity {
+  id: number
+  description: string
+  time: string
+  icon: string
+}
+
+// 培训状态数据
 const trainingStatus = ref<TrainingStatus>({
-  materialsCompleted: true,
-  lecturesSubmitted: 2,
+  materialsCompleted: false,
+  lecturesSubmitted: 0,
   maxLectures: 5,
-  currentStatus: 'practicing',
+  currentStatus: 'learning',
   sopUnlocked: false
 })
 
-// 模拟最近活动数据
-const recentActivities = ref([
-  {
-    id: 1,
-    description: '完成了第2次试讲练习',
-    time: '2小时前',
-    icon: 'M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z'
-  },
-  {
-    id: 2,
-    description: '查看了AI反馈报告',
-    time: '3小时前',
-    icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z'
-  },
-  {
-    id: 3,
-    description: '完成了培训资料学习',
-    time: '1天前',
-    icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253'
-  }
-])
+// 最近活动数据
+const recentActivities = ref<Activity[]>([])
 
 const getStatusColor = (status: string) => {
   const colors = {
@@ -251,8 +240,34 @@ const getStatusIcon = (status: string) => {
   return icons[status as keyof typeof icons] || icons.learning
 }
 
+// 加载培训状态数据
+const loadTrainingStatus = async () => {
+  try {
+    // TODO: 从API获取实际的培训状态数据
+    // const response = await fetch('/api/teacher/training-status')
+    // const data = await response.json()
+    // trainingStatus.value = data
+    console.log('加载培训状态数据...')
+  } catch (error) {
+    console.error('加载培训状态失败:', error)
+  }
+}
+
+// 加载最近活动数据
+const loadRecentActivities = async () => {
+  try {
+    // TODO: 从API获取实际的活动数据
+    // const response = await fetch('/api/teacher/recent-activities')
+    // const data = await response.json()
+    // recentActivities.value = data
+    console.log('加载最近活动数据...')
+  } catch (error) {
+    console.error('加载最近活动失败:', error)
+  }
+}
+
 onMounted(() => {
-  // TODO: 从API获取实际的培训状态数据
-  console.log('加载培训状态数据...')
+  loadTrainingStatus()
+  loadRecentActivities()
 })
 </script>

@@ -231,7 +231,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 
 interface Teacher {
   id: number
@@ -242,50 +242,21 @@ interface Teacher {
   createdAt: string
 }
 
-// 虚拟数据
-const teachers = ref<Teacher[]>([
-  {
-    id: 1,
-    name: '张小明',
-    email: 'zhang.xiaoming@example.com',
-    status: 'training',
-    lectureCount: 2,
-    createdAt: '2024-01-15'
-  },
-  {
-    id: 2,
-    name: '李小红',
-    email: 'li.xiaohong@example.com',
-    status: 'pending_review',
-    lectureCount: 3,
-    createdAt: '2024-01-14'
-  },
-  {
-    id: 3,
-    name: '王小华',
-    email: 'wang.xiaohua@example.com',
-    status: 'passed',
-    lectureCount: 4,
-    createdAt: '2024-01-13'
-  },
-  {
-    id: 4,
-    name: '刘小强',
-    email: 'liu.xiaoqiang@example.com',
-    status: 'failed',
-    lectureCount: 5,
-    createdAt: '2024-01-12'
-  },
-  {
-    id: 5,
-    name: '陈小美',
-    email: 'chen.xiaomei@example.com',
-    status: 'training',
-    lectureCount: 1,
-    createdAt: '2024-01-11'
-  }
-])
+// 教师数据
+const teachers = ref<Teacher[]>([])
 
+// 加载教师数据
+const loadTeachers = async () => {
+  try {
+    // TODO: 调用API获取教师数据
+    // const response = await fetch('/api/manager/teachers')
+    // const data = await response.json()
+    // teachers.value = data
+    console.log('加载教师数据')
+  } catch (error) {
+    console.error('加载教师数据失败:', error)
+  }
+}
 const searchQuery = ref('')
 const statusFilter = ref('')
 const showAddModal = ref(false)
@@ -390,4 +361,9 @@ const deleteTeacher = (teacher: Teacher) => {
     }
   }
 }
+
+// 生命周期
+onMounted(() => {
+  loadTeachers()
+})
 </script>

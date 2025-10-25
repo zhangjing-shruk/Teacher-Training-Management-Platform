@@ -185,7 +185,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 
 interface SOPStep {
   id: number
@@ -212,91 +212,20 @@ const selectedStatus = ref('')
 const searchQuery = ref('')
 
 // 虚拟SOP文档数据
-const sopDocuments = ref<SOPDocument[]>([
-  {
-    id: 1,
-    title: '课堂教学基本流程',
-    description: '标准化的课堂教学流程，包括课前准备、课堂实施、课后总结等环节',
-    category: 'teaching',
-    status: 'completed',
-    progress: 100,
-    estimatedTime: 30,
-    updatedAt: '2024-01-15',
-    steps: [
-      { id: 1, title: '课前准备检查', description: '检查教学设备、教材、教案', completed: true },
-      { id: 2, title: '开场导入', description: '问候学生，导入新课', completed: true },
-      { id: 3, title: '知识讲解', description: '按照教案进行知识点讲解', completed: true },
-      { id: 4, title: '互动练习', description: '组织学生进行练习和互动', completed: true },
-      { id: 5, title: '课堂总结', description: '总结本节课重点内容', completed: true }
-    ]
-  },
-  {
-    id: 2,
-    title: '学生评估流程',
-    description: '对学生学习效果进行科学评估的标准流程',
-    category: 'assessment',
-    status: 'in_progress',
-    progress: 60,
-    estimatedTime: 25,
-    updatedAt: '2024-01-12',
-    steps: [
-      { id: 1, title: '制定评估计划', description: '确定评估目标和方法', completed: true },
-      { id: 2, title: '设计评估工具', description: '准备测试题目或评估表', completed: true },
-      { id: 3, title: '实施评估', description: '按计划进行学生评估', completed: true },
-      { id: 4, title: '数据收集分析', description: '收集并分析评估数据', completed: false },
-      { id: 5, title: '反馈与改进', description: '向学生提供反馈并制定改进计划', completed: false }
-    ]
-  },
-  {
-    id: 3,
-    title: '课堂纪律管理',
-    description: '维护良好课堂秩序的管理流程和技巧',
-    category: 'management',
-    status: 'not_started',
-    progress: 0,
-    estimatedTime: 20,
-    updatedAt: '2024-01-10',
-    steps: [
-      { id: 1, title: '建立课堂规则', description: '制定并宣布课堂纪律要求', completed: false },
-      { id: 2, title: '积极引导', description: '通过正面引导维护秩序', completed: false },
-      { id: 3, title: '及时干预', description: '对违纪行为及时处理', completed: false },
-      { id: 4, title: '奖惩机制', description: '实施合理的奖惩措施', completed: false }
-    ]
-  },
-  {
-    id: 4,
-    title: '突发事件应急处理',
-    description: '课堂突发事件的应急处理标准流程',
-    category: 'emergency',
-    status: 'not_started',
-    progress: 0,
-    estimatedTime: 35,
-    updatedAt: '2024-01-08',
-    steps: [
-      { id: 1, title: '事件识别', description: '快速识别突发事件类型', completed: false },
-      { id: 2, title: '安全评估', description: '评估事件对学生安全的影响', completed: false },
-      { id: 3, title: '应急响应', description: '按照预案执行应急措施', completed: false },
-      { id: 4, title: '事后处理', description: '事件处理后的跟进工作', completed: false },
-      { id: 5, title: '总结反思', description: '总结经验，完善应急预案', completed: false }
-    ]
-  },
-  {
-    id: 5,
-    title: '多媒体教学设备使用',
-    description: '标准化的多媒体教学设备操作流程',
-    category: 'teaching',
-    status: 'in_progress',
-    progress: 40,
-    estimatedTime: 15,
-    updatedAt: '2024-01-05',
-    steps: [
-      { id: 1, title: '设备检查', description: '检查投影仪、音响等设备状态', completed: true },
-      { id: 2, title: '连接调试', description: '连接电脑并调试显示效果', completed: true },
-      { id: 3, title: '课件准备', description: '准备并测试教学课件', completed: false },
-      { id: 4, title: '使用规范', description: '按规范操作教学设备', completed: false }
-    ]
+const sopDocuments = ref<SOPDocument[]>([])
+
+// 加载SOP文档数据
+const loadSOPDocuments = async () => {
+  try {
+    // TODO: 调用API获取SOP文档数据
+    // const response = await fetch('/api/teacher/sop-documents')
+    // const data = await response.json()
+    // sopDocuments.value = data
+    console.log('加载SOP文档数据')
+  } catch (error) {
+    console.error('加载SOP文档失败:', error)
   }
-])
+}
 
 // 计算属性
 const filteredDocuments = computed(() => {
@@ -363,4 +292,9 @@ const viewDocument = (document: SOPDocument) => {
   // TODO: 跳转到详细页面
   alert(`查看详情: ${document.title}`)
 }
+
+// 生命周期
+onMounted(() => {
+  loadSOPDocuments()
+})
 </script>

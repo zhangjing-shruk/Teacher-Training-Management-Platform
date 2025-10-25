@@ -378,152 +378,77 @@ const historyFilter = ref({
   period: 'month'
 })
 
-// 虚拟数据
-const practiceMode: PracticeMode[] = [
-  {
-    id: 'free_speech',
-    name: '自由演讲',
-    description: '自由选择主题进行演讲练习',
-    duration: '5-20分钟',
-    difficulty: '初级',
-    icon: 'fas fa-microphone',
-    color: 'bg-blue-500'
-  },
-  {
-    id: 'structured_lesson',
-    name: '结构化授课',
-    description: '按照教学大纲进行结构化授课',
-    duration: '10-30分钟',
-    difficulty: '中级',
-    icon: 'fas fa-chalkboard-teacher',
-    color: 'bg-green-500'
-  },
-  {
-    id: 'interactive_teaching',
-    name: '互动教学',
-    description: '模拟师生互动的教学场景',
-    duration: '15-25分钟',
-    difficulty: '高级',
-    icon: 'fas fa-users',
-    color: 'bg-purple-500'
-  }
-]
-
-const courseTopics = [
-  '数学基础概念',
-  '语文阅读理解',
-  '英语口语表达',
-  '科学实验演示',
-  '历史事件分析',
-  '地理知识讲解',
-  '艺术欣赏指导',
-  '体育技能教学'
-]
-
-const evaluationFocus: EvaluationFocus[] = [
-  { id: 'pronunciation', name: '发音清晰度' },
-  { id: 'pace', name: '语速控制' },
-  { id: 'structure', name: '内容结构' },
-  { id: 'engagement', name: '互动参与' },
-  { id: 'body_language', name: '肢体语言' },
-  { id: 'time_management', name: '时间管理' }
-]
+// 练习数据
+const practiceMode: PracticeMode[] = []
+const courseTopics: string[] = []
+const evaluationFocus: EvaluationFocus[] = []
 
 const realtimeMetrics = ref<RealtimeMetrics>({
-  volume: 75,
-  clarity: 82,
-  pace: '适中',
-  engagement: 68
+  volume: 0,
+  clarity: 0,
+  pace: '未开始',
+  engagement: 0
 })
 
 const currentResult = ref<PracticeResult>({
-  overallScore: 85,
-  detailedScores: [
-    { name: '发音', score: 88 },
-    { name: '语速', score: 82 },
-    { name: '结构', score: 87 },
-    { name: '互动', score: 83 }
-  ],
-  aiFeedback: [
-    {
-      category: '发音清晰度',
-      level: 'excellent',
-      levelText: '优秀',
-      comment: '发音清晰，语调自然，能够很好地传达教学内容。',
-      suggestions: [],
-      icon: 'fas fa-volume-up',
-      color: 'text-green-500'
-    },
-    {
-      category: '教学结构',
-      level: 'good',
-      levelText: '良好',
-      comment: '教学结构较为清晰，但在过渡环节可以更加流畅。',
-      suggestions: [
-        '在章节之间添加更明确的过渡语句',
-        '可以使用更多的总结性语言'
-      ],
-      icon: 'fas fa-sitemap',
-      color: 'text-blue-500'
-    },
-    {
-      category: '互动参与',
-      level: 'needs_improvement',
-      levelText: '待改进',
-      comment: '互动环节较少，建议增加更多与学生的互动。',
-      suggestions: [
-        '增加提问频率',
-        '设计更多互动环节',
-        '鼓励学生参与讨论'
-      ],
-      icon: 'fas fa-comments',
-      color: 'text-yellow-500'
-    }
-  ]
+  overallScore: 0,
+  detailedScores: [],
+  aiFeedback: []
 })
 
-const practiceHistory: PracticeRecord[] = [
-  {
-    id: '1',
-    modeId: 'free_speech',
-    topic: '数学基础概念',
-    duration: 10,
-    score: 85,
-    date: '2024-01-15T10:30:00Z'
-  },
-  {
-    id: '2',
-    modeId: 'structured_lesson',
-    topic: '语文阅读理解',
-    duration: 15,
-    score: 78,
-    date: '2024-01-14T14:20:00Z'
-  },
-  {
-    id: '3',
-    modeId: 'interactive_teaching',
-    topic: '英语口语表达',
-    duration: 20,
-    score: 92,
-    date: '2024-01-13T09:15:00Z'
-  },
-  {
-    id: '4',
-    modeId: 'free_speech',
-    topic: '科学实验演示',
-    duration: 12,
-    score: 88,
-    date: '2024-01-12T16:45:00Z'
-  },
-  {
-    id: '5',
-    modeId: 'structured_lesson',
-    topic: '历史事件分析',
-    duration: 18,
-    score: 76,
-    date: '2024-01-11T11:30:00Z'
+const practiceHistory: PracticeRecord[] = []
+
+// 加载练习模式数据
+const loadPracticeModes = async () => {
+  try {
+    // TODO: 从API获取练习模式数据
+    // const response = await fetch('/api/teacher/practice-modes')
+    // const data = await response.json()
+    // practiceMode.splice(0, practiceMode.length, ...data)
+    console.log('加载练习模式数据...')
+  } catch (error) {
+    console.error('加载练习模式失败:', error)
   }
-]
+}
+
+// 加载课程主题数据
+const loadCourseTopics = async () => {
+  try {
+    // TODO: 从API获取课程主题数据
+    // const response = await fetch('/api/teacher/course-topics')
+    // const data = await response.json()
+    // courseTopics.splice(0, courseTopics.length, ...data)
+    console.log('加载课程主题数据...')
+  } catch (error) {
+    console.error('加载课程主题失败:', error)
+  }
+}
+
+// 加载评估重点数据
+const loadEvaluationFocus = async () => {
+  try {
+    // TODO: 从API获取评估重点数据
+    // const response = await fetch('/api/teacher/evaluation-focus')
+    // const data = await response.json()
+    // evaluationFocus.splice(0, evaluationFocus.length, ...data)
+    console.log('加载评估重点数据...')
+  } catch (error) {
+    console.error('加载评估重点失败:', error)
+  }
+}
+
+// 加载练习历史数据
+const loadPracticeHistory = async () => {
+  try {
+    // TODO: 从API获取练习历史数据
+    // const response = await fetch('/api/teacher/practice-history')
+    // const data = await response.json()
+    // practiceHistory.splice(0, practiceHistory.length, ...data)
+    console.log('加载练习历史数据...')
+  } catch (error) {
+    console.error('加载练习历史失败:', error)
+  }
+}
 
 // 计算属性
 const canStartPractice = computed(() => {
@@ -558,19 +483,13 @@ const startPractice = () => {
   isRecording.value = true
   recordingTime.value = 0
   
-  // 模拟实时指标更新
+  // 开始录制和实时分析
   recordingTimer.value = setInterval(() => {
     recordingTime.value++
     
-    // 模拟实时指标变化
-    const paceOptions = ['较慢', '适中', '较快'] as const
-    const randomIndex = Math.floor(Math.random() * paceOptions.length)
-    realtimeMetrics.value = {
-      volume: Math.floor(Math.random() * 30) + 70,
-      clarity: Math.floor(Math.random() * 20) + 75,
-      pace: paceOptions[randomIndex] || '适中',
-      engagement: Math.floor(Math.random() * 40) + 60
-    }
+    // TODO: 实现真实的实时指标分析
+    // 这里应该调用AI分析API获取实时指标
+    console.log('实时分析中...')
     
     // 自动结束
     if (recordingTime.value >= practiceSettings.value.duration * 60) {
@@ -586,10 +505,25 @@ const stopPractice = () => {
     recordingTimer.value = null
   }
   
-  // 模拟生成结果
-  setTimeout(() => {
+  // 生成分析结果
+  generatePracticeResult()
+}
+
+// 生成练习结果
+const generatePracticeResult = async () => {
+  try {
+    // TODO: 调用AI分析API生成练习结果
+    // const response = await fetch('/api/teacher/analyze-practice', {
+    //   method: 'POST',
+    //   body: practiceData
+    // })
+    // const result = await response.json()
+    // currentResult.value = result
+    console.log('生成练习结果...')
     showResults.value = true
-  }, 1000)
+  } catch (error) {
+    console.error('生成结果失败:', error)
+  }
 }
 
 const restartPractice = () => {
@@ -653,6 +587,13 @@ const getScoreText = (score: number) => {
 }
 
 // 生命周期
+onMounted(() => {
+  loadPracticeModes()
+  loadCourseTopics()
+  loadEvaluationFocus()
+  loadPracticeHistory()
+})
+
 onUnmounted(() => {
   if (recordingTimer.value) {
     clearInterval(recordingTimer.value)

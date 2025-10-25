@@ -362,7 +362,7 @@ const feedback = ref({
     '建议使用更多生动的例子来解释抽象概念',
     '可以适当放慢语速，给学生更多思考时间'
   ],
-  detailedFeedback: '本次试讲整体表现良好。教学内容准备充分，知识点讲解清晰。在教学过程中，能够运用适当的教学方法，但在互动环节还有提升空间。建议在今后的教学中，多设计一些启发性问题，引导学生主动思考。同时，可以通过更多的实例和练习来帮助学生理解和掌握知识点。',
+  detailedFeedback: '本次试讲整体表现良好。教学内容准备充分，知识点讲解清晰。在教学过程中，能够运用适当的教学方法，但在互动环节还有提升空间。建议在今后的教学中，多设计一些启发性问题，让学生主动思考。同时，可以通过更多的实例和练习来帮助学生理解和掌握知识点。',
   summary: '总体而言，这是一次成功的试讲。您在内容准确性和时间控制方面表现突出，建议继续保持。在互动设计和教学方法多样化方面还有提升空间，这将是您下一步重点改进的方向。',
   keyMoments: [
     {
@@ -475,20 +475,17 @@ const formatTime = (seconds: number) => {
 const togglePlay = () => {
   isPlaying.value = !isPlaying.value
   if (isPlaying.value) {
-    // 模拟播放进度
-    const interval = setInterval(() => {
-      if (currentTime.value < totalTime.value && isPlaying.value) {
-        currentTime.value += 1
-      } else {
-        clearInterval(interval)
-        isPlaying.value = false
-      }
-    }, 1000)
+    // TODO: 实现真实的视频播放控制
+    console.log('开始播放视频')
+  } else {
+    console.log('暂停播放视频')
   }
 }
 
 const seekToTime = (time: number) => {
   currentTime.value = time
+  // TODO: 实现真实的视频跳转功能
+  console.log('跳转到时间:', time)
 }
 
 // 操作方法

@@ -208,7 +208,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
@@ -238,85 +238,8 @@ const selectedTimeRange = ref('all')
 const selectedSubject = ref('')
 const selectedScoreRange = ref('')
 
-// 虚拟反馈报告数据
-const reports = ref<FeedbackReport[]>([
-  {
-    id: 1,
-    title: '数学基础 - 分数运算教学',
-    subject: 'math',
-    date: '2024-01-15',
-    duration: 12,
-    overallScore: 88,
-    scores: {
-      content: 90,
-      delivery: 85,
-      interaction: 82,
-      time: 95
-    },
-    keyFeedback: [
-      { id: 1, type: 'positive', text: '教学内容结构清晰，逻辑性强' },
-      { id: 2, type: 'positive', text: '语言表达流畅，语速适中' },
-      { id: 3, type: 'suggestion', text: '可以增加更多互动环节，提高学生参与度' }
-    ]
-  },
-  {
-    id: 2,
-    title: '语文阅读 - 古诗词赏析',
-    subject: 'chinese',
-    date: '2024-01-12',
-    duration: 15,
-    overallScore: 92,
-    scores: {
-      content: 95,
-      delivery: 90,
-      interaction: 88,
-      time: 95
-    },
-    keyFeedback: [
-      { id: 1, type: 'positive', text: '对古诗词的理解深入，讲解生动' },
-      { id: 2, type: 'positive', text: '能够很好地引导学生思考' },
-      { id: 3, type: 'positive', text: '时间控制得当，节奏把握良好' }
-    ]
-  },
-  {
-    id: 3,
-    title: '英语口语 - 日常对话练习',
-    subject: 'english',
-    date: '2024-01-10',
-    duration: 10,
-    overallScore: 75,
-    scores: {
-      content: 80,
-      delivery: 75,
-      interaction: 70,
-      time: 75
-    },
-    keyFeedback: [
-      { id: 1, type: 'positive', text: '发音标准，语调自然' },
-      { id: 2, type: 'negative', text: '互动环节设计不够丰富' },
-      { id: 3, type: 'suggestion', text: '建议增加角色扮演等活动形式' }
-    ]
-  },
-  {
-    id: 4,
-    title: '数学应用 - 几何图形认知',
-    subject: 'math',
-    date: '2024-01-08',
-    duration: 14,
-    overallScore: 85,
-    scores: {
-      content: 88,
-      delivery: 82,
-      interaction: 85,
-      time: 85
-    },
-    keyFeedback: [
-      { id: 1, type: 'positive', text: '教具使用恰当，直观易懂' },
-      { id: 2, type: 'positive', text: '能够及时回应学生问题' },
-      { id: 3, type: 'suggestion', text: '可以适当放慢讲解速度' }
-    ]
-  }
-])
+// 反馈报告数据
+const reports = ref<FeedbackReport[]>([])
 
 // 计算属性
 const filteredReports = computed(() => {
@@ -346,6 +269,19 @@ const latestReportDate = computed(() => {
   )
   return latest.date
 })
+
+// 加载反馈报告数据
+const loadFeedbackReports = async () => {
+  try {
+    // TODO: 从API获取实际的反馈报告数据
+    // const response = await fetch('/api/teacher/feedback-reports')
+    // const data = await response.json()
+    // reports.value = data
+    console.log('加载反馈报告数据...')
+  } catch (error) {
+    console.error('加载反馈报告失败:', error)
+  }
+}
 
 // 工具函数
 const checkScoreRange = (score: number, range: string) => {
@@ -392,4 +328,9 @@ const generateNewReport = () => {
   // TODO: 实现AI报告生成功能
   alert('正在生成新的反馈报告...')
 }
+
+// 组件挂载时加载数据
+onMounted(() => {
+  loadFeedbackReports()
+})
 </script>
