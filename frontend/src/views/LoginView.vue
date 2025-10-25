@@ -80,9 +80,6 @@
     :show="showResetPasswordModal" 
     @close="showResetPasswordModal = false" 
   />
-  
-  <!-- 调试信息 -->
-  <DebugUserInfo />
 </template>
 
 <script setup lang="ts">
@@ -91,7 +88,6 @@ import { useRouter } from 'vue-router'
 import { useSupabaseAuthStore } from '@/stores/supabaseAuth'
 import type { LoginCredentials } from '@/stores/supabaseAuth'
 import ResetPasswordModal from '@/components/ResetPasswordModal.vue'
-import DebugUserInfo from '@/components/DebugUserInfo.vue'
 
 const router = useRouter()
 const authStore = useSupabaseAuthStore()
