@@ -379,6 +379,7 @@ export const useSupabaseAuthStore = defineStore('supabaseAuth', () => {
     
     // 方法
     initializeAuth,
+    fetchUserProfile,
     register,
     login,
     logout,
