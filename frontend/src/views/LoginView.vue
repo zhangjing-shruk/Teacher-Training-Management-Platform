@@ -60,40 +60,26 @@
             <router-link to="/register" class="font-medium text-blue-500 hover:text-blue-600">
               立即注册
             </router-link>
+            <span class="mx-2 text-gray-400">|</span>
+            <button 
+              @click="showResetPasswordModal = true"
+              class="font-medium text-blue-500 hover:text-blue-600 focus:outline-none"
+            >
+              重置密码
+            </button>
           </p>
         </div>
       </div>
 
-      <!-- 测试账号 -->
-      <div class="bg-white rounded-lg shadow-lg p-6">
-        <h3 class="text-lg font-medium text-gray-900 mb-4 text-center">测试账号</h3>
-        <div class="grid grid-cols-2 gap-4">
-          <div class="text-center">
-            <h4 class="font-medium text-gray-700 mb-2">教师账户</h4>
-            <p class="text-sm text-gray-600 mb-2">teacher1@example.com</p>
-            <p class="text-sm text-gray-600 mb-3">teacher123</p>
-            <button
-              @click="fillTestAccount('teacher1@example.com', 'teacher123')"
-              class="w-full px-4 py-2 bg-blue-500 text-white text-sm rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
-            >
-              一键填入
-            </button>
-          </div>
-          <div class="text-center">
-            <h4 class="font-medium text-gray-700 mb-2">管理员账户</h4>
-            <p class="text-sm text-gray-600 mb-2">admin@example.com</p>
-            <p class="text-sm text-gray-600 mb-3">admin123</p>
-            <button
-              @click="fillTestAccount('admin@example.com', 'admin123')"
-              class="w-full px-4 py-2 bg-blue-500 text-white text-sm rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
-            >
-              一键填入
-            </button>
-          </div>
-        </div>
-      </div>
+
     </div>
   </div>
+
+  <!-- 重置密码弹窗 -->
+  <ResetPasswordModal 
+    :show="showResetPasswordModal" 
+    @close="showResetPasswordModal = false" 
+  />
 </template>
 
 <script setup lang="ts">
@@ -101,6 +87,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSupabaseAuthStore } from '@/stores/supabaseAuth'
 import type { LoginCredentials } from '@/stores/supabaseAuth'
+import ResetPasswordModal from '@/components/ResetPasswordModal.vue'
 
 const router = useRouter()
 const authStore = useSupabaseAuthStore()
@@ -112,6 +99,7 @@ const form = ref<LoginCredentials>({
 
 const loading = ref(false)
 const error = ref<string | null>(null)
+const showResetPasswordModal = ref(false)
 
 const handleLogin = async () => {
   loading.value = true
@@ -142,8 +130,5 @@ const handleLogin = async () => {
   }
 }
 
-const fillTestAccount = (email: string, password: string) => {
-  form.value.email = email
-  form.value.password = password
-}
+
 </script>

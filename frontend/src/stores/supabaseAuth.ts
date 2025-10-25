@@ -15,6 +15,11 @@ export interface RegisterData {
   role: typeof USER_ROLES[keyof typeof USER_ROLES]
 }
 
+export interface ResetPasswordData {
+  email: string
+  newPassword: string
+}
+
 export const useSupabaseAuthStore = defineStore('supabaseAuth', () => {
   const user = ref<User | null>(null)
   const session = ref<Session | null>(null)
@@ -307,21 +312,27 @@ export const useSupabaseAuthStore = defineStore('supabaseAuth', () => {
   }
 
   // 重置密码
-  const resetPassword = async (email: string) => {
-    if (!supabase) {
-      error.value = 'Supabase not configured'
-      throw new Error('Authentication service not available')
-    }
-    
+  const resetPassword = async (resetData: ResetPasswordData) => {
     try {
       loading.value = true
       error.value = null
 
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`
+      // 调用后端API重置密码
+      const response = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(resetData)
       })
 
-      if (resetError) throw resetError
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.detail || '重置密码失败')
+      }
+
+      const result = await response.json()
+      return result
     } catch (err: any) {
       error.value = err.message || '重置密码失败'
       throw err

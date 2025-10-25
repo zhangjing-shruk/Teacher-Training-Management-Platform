@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel, EmailStr
 
 from app.core.database import get_db
-from app.core.security import verify_password, create_access_token, verify_token
+from app.core.security import verify_password, create_access_token, verify_token, get_password_hash
 from app.models.user import User, UserRole, TrainingStatus
 from app.core.config import settings
 
@@ -37,6 +37,11 @@ class Token(BaseModel):
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
+
+
+class ResetPasswordRequest(BaseModel):
+    email: EmailStr
+    newPassword: str
 
 
 def get_user_by_email(db: Session, email: str):
@@ -127,5 +132,37 @@ async def get_current_user_info(current_user: User = Depends(get_current_user)):
 
 @router.post("/logout")
 async def logout():
-    """用户登出（前端处理token清除）"""
+    """登出"""
     return {"message": "登出成功"}
+
+
+@router.post("/reset-password")
+async def reset_password(reset_data: ResetPasswordRequest, db: Session = Depends(get_db)):
+    """重置密码"""
+    # 查找用户
+    user = get_user_by_email(db, reset_data.email)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="用户不存在"
+        )
+    
+    # 验证新密码长度
+    if len(reset_data.newPassword) < 6:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="密码长度至少为6位"
+        )
+    
+    try:
+        # 更新密码
+        user.hashed_password = get_password_hash(reset_data.newPassword)
+        db.commit()
+        
+        return {"message": "密码重置成功"}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="重置密码失败，请重试"
+        )
