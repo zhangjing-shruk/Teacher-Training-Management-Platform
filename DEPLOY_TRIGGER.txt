@@ -1,0 +1,4 @@
+DEPLOYMENT TRIGGER - $(date)
+This file is created to force a new Vercel deployment.
+Timestamp: $(date '+%Y-%m-%d %H:%M:%S')
+Commit: Force deployment for file preview functionality fix
