@@ -418,6 +418,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { runSupabaseTest } from '@/utils/supabaseTest'
 
 interface Material {
   id: string  // 改为 string 类型以支持 UUID
@@ -877,9 +878,15 @@ const clearSelectedFile = () => {
 // 从 Supabase 加载材料数据
 const loadMaterials = async () => {
   try {
+    console.log('📚 开始加载培训材料列表...')
+    
     // 使用 Supabase 服务获取培训资料
     const { TrainingMaterialService } = await import('@/services/supabaseService')
+    console.log('✅ TrainingMaterialService 导入成功')
+    
     const materialsData = await TrainingMaterialService.getAll()
+    console.log('📊 获取到的原始材料数据:', materialsData)
+    console.log(`📈 材料数量: ${materialsData?.length || 0}`)
     
     // 转换 Supabase 数据格式为前端格式
     materials.value = materialsData.map((material: any) => ({
@@ -894,14 +901,26 @@ const loadMaterials = async () => {
       createdAt: material.created_at,
       updatedAt: material.updated_at
     }))
+    
+    console.log('✅ 材料列表加载成功，转换后的数据:', materials.value)
   } catch (error: any) {
-    console.error('加载材料列表失败:', error)
+    console.error('❌ 加载材料列表失败:', error)
+    console.error('错误详情:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+      cause: error.cause
+    })
     alert('加载材料列表失败，请刷新页面重试')
   }
 }
 
 // 页面挂载时加载数据
 onMounted(() => {
+  // 在开发和生产环境中运行 Supabase 连接测试
+  console.log('🔍 MaterialsView 组件已挂载，开始 Supabase 连接测试...')
+  runSupabaseTest()
+  
   loadMaterials()
 })
 
