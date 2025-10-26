@@ -389,9 +389,24 @@
               </button>
               <button
                 type="submit"
-                class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+                :disabled="isSubmitting"
+                :class="[
+                  'px-4 py-2 text-sm font-medium text-white rounded-md',
+                  isSubmitting 
+                    ? 'bg-gray-400 cursor-not-allowed' 
+                    : 'bg-blue-600 hover:bg-blue-700'
+                ]"
               >
-                {{ showAddModal ? '添加' : '保存' }}
+                <span v-if="isSubmitting" class="flex items-center">
+                  <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  {{ showAddModal ? '添加中...' : '保存中...' }}
+                </span>
+                <span v-else>
+                  {{ showAddModal ? '添加' : '保存' }}
+                </span>
               </button>
             </div>
           </form>
@@ -445,6 +460,7 @@ const selectedFile = ref<File | null>(null)
 const isDragOver = ref(false)
 const uploadProgress = ref(0)
 const uploadError = ref('')
+const isSubmitting = ref(false)
 const acceptedFileTypes = '.pdf,.doc,.docx,.ppt,.pptx,.mp4,.mp3,.avi,.mov,.wmv'
 
 const filteredMaterials = computed(() => {
@@ -616,63 +632,90 @@ const deleteMaterial = async (material: Material) => {
 }
 
 const submitMaterial = async () => {
-  console.log('submitMaterial 函数被调用')
-  console.log('表单数据:', materialForm.value)
-  console.log('选中的文件:', selectedFile.value)
+  console.log('=== submitMaterial 函数开始执行 ===')
+  
+  // 防止重复提交
+  if (isSubmitting.value) {
+    console.log('⚠️ 正在提交中，忽略重复请求')
+    return
+  }
+  
+  isSubmitting.value = true
+  console.log('🔄 设置提交状态为 true')
+  
+  console.log('表单数据:', JSON.stringify(materialForm.value, null, 2))
+  console.log('选中的文件:', selectedFile.value ? {
+    name: selectedFile.value.name,
+    size: selectedFile.value.size,
+    type: selectedFile.value.type
+  } : null)
   console.log('showAddModal:', showAddModal.value)
   console.log('showEditModal:', showEditModal.value)
   
   // 清除之前的错误信息
   uploadError.value = ''
   
-  if (!materialForm.value.title || !materialForm.value.type) {
-    uploadError.value = '请填写完整的资料信息'
-    alert('请填写完整的资料信息')
+  // 表单验证
+  console.log('开始表单验证...')
+  if (!materialForm.value.title?.trim()) {
+    const errorMsg = '请输入资料标题'
+    console.error('验证失败:', errorMsg)
+    uploadError.value = errorMsg
+    alert(errorMsg)
+    isSubmitting.value = false
     return
   }
+  
+  if (!materialForm.value.type?.trim()) {
+    const errorMsg = '请选择资料类型'
+    console.error('验证失败:', errorMsg)
+    uploadError.value = errorMsg
+    alert(errorMsg)
+    isSubmitting.value = false
+    return
+  }
+  
+  console.log('表单验证通过')
 
   if (showAddModal.value) {
     // 添加新资料
     if (!selectedFile.value) {
-      uploadError.value = '请选择要上传的文件'
-      alert('请选择要上传的文件')
+      const errorMsg = '请选择要上传的文件'
+      console.error('验证失败:', errorMsg)
+      uploadError.value = errorMsg
+      alert(errorMsg)
+      isSubmitting.value = false
       return
     }
     
-    console.log('开始创建新资料...')
+    console.log('=== 开始创建新资料 ===')
 
     try {
       uploadProgress.value = 0
       uploadError.value = ''
 
-      // 创建 FormData
-      const formData = new FormData()
-      formData.append('title', materialForm.value.title)
-      formData.append('description', materialForm.value.description)
-      formData.append('type', materialForm.value.type)
-      formData.append('status', materialForm.value.status)
-      formData.append('file', selectedFile.value)
-
-      // 使用 Supabase 服务创建培训资料
-      console.log('导入 TrainingMaterialService...')
+      // 检查Supabase服务可用性
+      console.log('检查Supabase服务可用性...')
       const { TrainingMaterialService } = await import('@/services/supabaseService')
+      console.log('TrainingMaterialService 导入成功')
       
-      // 创建培训资料记录
-       // 将 presentation 映射为 document 类型
-        const mappedType = materialForm.value.type === 'presentation' ? 'document' : materialForm.value.type
+      // 准备资料数据
+      const mappedType = materialForm.value.type === 'presentation' ? 'document' : materialForm.value.type
         
-        const materialData = {
-          title: materialForm.value.title,
-          description: materialForm.value.description,
-          material_type: mappedType as 'document' | 'video' | 'interactive',
-          content_url: `uploads/${selectedFile.value.name}`, // 简化的文件路径
-          duration_minutes: parseInt(materialForm.value.duration as string) || 0,
-          created_by: 'manager'
-        }
+      const materialData = {
+        title: materialForm.value.title.trim(),
+        description: materialForm.value.description?.trim() || '',
+        material_type: mappedType as 'document' | 'video' | 'interactive',
+        content_url: `uploads/${selectedFile.value.name}`,
+        duration_minutes: parseInt(materialForm.value.duration as string) || 0,
+        created_by: 'manager'
+      }
       
-      console.log('准备创建资料，数据:', materialData)
+      console.log('准备创建资料，数据:', JSON.stringify(materialData, null, 2))
+      console.log('开始调用 TrainingMaterialService.create...')
+      
       const newMaterial = await TrainingMaterialService.create(materialData)
-      console.log('资料创建成功:', newMaterial)
+      console.log('✅ 资料创建成功:', JSON.stringify(newMaterial, null, 2))
       
       // 转换为前端格式
        const materialToAdd: Material = {
@@ -689,13 +732,30 @@ const submitMaterial = async () => {
         }
       
       materials.value.unshift(materialToAdd)
+      console.log('✅ 资料已添加到列表，总数:', materials.value.length)
       alert('资料上传成功！')
+      closeModal()
       
     } catch (error) {
-      uploadError.value = error instanceof Error ? error.message : '上传失败'
-      console.error('文件上传错误:', error)
-      alert('上传失败：' + (error instanceof Error ? error.message : '未知错误'))
-      return
+      console.error('❌ 创建资料失败:', error)
+      
+      let errorMessage = '上传失败'
+      if (error instanceof Error) {
+        errorMessage = error.message
+        console.error('错误详情:', {
+          name: error.name,
+          message: error.message,
+          stack: error.stack
+        })
+      } else {
+        console.error('未知错误类型:', typeof error, error)
+      }
+      
+      uploadError.value = errorMessage
+      alert('上传失败：' + errorMessage)
+    } finally {
+      isSubmitting.value = false
+      console.log('🔄 重置提交状态为 false')
     }
   } else if (showEditModal.value && selectedMaterial.value) {
     // 编辑现有资料
@@ -722,6 +782,8 @@ const submitMaterial = async () => {
   }
 
   closeModal()
+  isSubmitting.value = false
+  console.log('🔄 重置提交状态为 false (编辑完成)')
 }
 
 // 文件上传相关方法
@@ -885,6 +947,10 @@ const closeModal = () => {
   }
   // 清理文件上传状态
   clearSelectedFile()
+  // 重置提交状态
+  isSubmitting.value = false
+  uploadError.value = ''
+  console.log('🔄 closeModal: 重置所有状态')
 }
 </script>
 
