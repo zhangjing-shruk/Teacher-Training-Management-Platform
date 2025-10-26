@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { supabase, isSupabaseConfigured, type User, USER_ROLES } from '@/lib/supabase'
 import type { AuthError, Session } from '@supabase/supabase-js'
 import { parseError, showUserFriendlyError, logError, isNetworkError } from '@/utils/errorHandler'
+import { useLocalAuthStore } from './localAuth'
 
 export interface LoginCredentials {
   email: string
@@ -22,10 +23,16 @@ export interface ResetPasswordData {
 }
 
 export const useSupabaseAuthStore = defineStore('supabaseAuth', () => {
-  const user = ref<User | null>(null)
   const session = ref<Session | null>(null)
+  const user = ref<User | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
+  
+  // 检查是否为本地开发模式
+  const isLocalMode = !isSupabaseConfigured || import.meta.env.VITE_LOCAL_DEV_MODE === 'true'
+  
+  // 本地认证存储实例
+  const localAuth = isLocalMode ? useLocalAuthStore() : null
 
   const isAuthenticated = computed(() => !!session.value && !!user.value)
   const isTeacher = computed(() => user.value?.role === USER_ROLES.TEACHER)
@@ -37,48 +44,112 @@ export const useSupabaseAuthStore = defineStore('supabaseAuth', () => {
       loading.value = true
       error.value = null
       
-      // 检查是否有有效的 Supabase 配置
-      if (!isSupabaseConfigured || !supabase) {
-        console.warn('Supabase not configured, skipping auth initialization')
+      // 如果是本地模式，使用本地认证
+      if (isLocalMode && localAuth) {
+        console.log('Running in local development mode')
+        await localAuth.initializeAuth()
+        
+        // 同步本地认证状态到主存储
+        if (localAuth.isAuthenticated) {
+          const localUser = localAuth.user
+          const localSession = localAuth.session
+          
+          if (localUser && localSession) {
+            user.value = {
+               id: localUser.id,
+               email: localUser.email,
+               full_name: localUser.full_name,
+               role: localUser.role as typeof USER_ROLES[keyof typeof USER_ROLES],
+               is_active: localUser.is_active,
+               created_at: localUser.created_at,
+               updated_at: localUser.created_at
+             }
+            
+            session.value = {
+              access_token: localSession.access_token,
+              refresh_token: '',
+              expires_in: 86400,
+              expires_at: localSession.expires_at,
+              token_type: 'bearer',
+              user: {
+                id: localUser.id,
+                email: localUser.email,
+                aud: 'authenticated',
+                role: 'authenticated',
+                created_at: localUser.created_at,
+                updated_at: localUser.created_at,
+                app_metadata: {},
+                user_metadata: {}
+              }
+            } as Session
+          }
+        }
+        
         loading.value = false
         return Promise.resolve()
       }
       
-      // 获取当前会话（添加超时保护和重试机制）
+      // 检查是否有有效的 Supabase 配置
+      if (!isSupabaseConfigured || !supabase) {
+        console.warn('Supabase not configured, running in local mode')
+        loading.value = false
+        return Promise.resolve()
+      }
+      
+      // 获取当前会话（减少超时时间，增加重试机制）
       const sessionPromise = supabase.auth.getSession()
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Session fetch timeout')), 10000)
+        setTimeout(() => reject(new Error('Session fetch timeout')), 5000) // 减少到5秒
       )
       
-      const { data: { session: currentSession } } = await Promise.race([
-        sessionPromise,
-        timeoutPromise
-      ]) as any
-      
-      if (currentSession) {
-        session.value = currentSession
-        try {
-          await fetchUserProfile(currentSession.user.id)
-        } catch (profileError) {
-          console.warn('Failed to fetch user profile:', profileError)
-          // 继续执行，不阻塞认证流程
+      try {
+        const { data: { session: currentSession }, error: sessionError } = await Promise.race([
+          sessionPromise,
+          timeoutPromise
+        ]) as any
+        
+        if (sessionError) {
+          console.warn('Session fetch error:', sessionError)
+          throw sessionError
+        }
+        
+        if (currentSession) {
+          session.value = currentSession
+          try {
+            await fetchUserProfile(currentSession.user.id)
+          } catch (profileError) {
+            console.warn('Failed to fetch user profile:', profileError)
+            // 继续执行，不阻塞认证流程
+          }
+        }
+
+        // 监听认证状态变化
+        supabase.auth.onAuthStateChange(async (event, newSession) => {
+          session.value = newSession
+          
+          if (newSession?.user) {
+            try {
+              await fetchUserProfile(newSession.user.id)
+            } catch (profileError) {
+              console.warn('Failed to fetch user profile on auth change:', profileError)
+            }
+          } else {
+            user.value = null
+          }
+        })
+        
+      } catch (timeoutError) {
+        console.warn('Auth initialization timeout, retrying...', timeoutError)
+        
+        // 重试机制：最多重试2次
+        if (retryCount < 2) {
+          await new Promise(resolve => setTimeout(resolve, 1000)) // 等待1秒
+          return initializeAuth(retryCount + 1)
+        } else {
+          console.warn('Auth initialization failed after retries, continuing without auth')
+          // 不抛出错误，允许应用继续运行
         }
       }
-
-      // 监听认证状态变化
-      supabase.auth.onAuthStateChange(async (event, newSession) => {
-        session.value = newSession
-        
-        if (newSession?.user) {
-          try {
-            await fetchUserProfile(newSession.user.id)
-          } catch (profileError) {
-            console.warn('Failed to fetch user profile on auth change:', profileError)
-          }
-        } else {
-          user.value = null
-        }
-      })
     } catch (err: any) {
       logError(err, 'Auth initialization')
       const userFriendlyMessage = showUserFriendlyError(err)
@@ -132,6 +203,26 @@ export const useSupabaseAuthStore = defineStore('supabaseAuth', () => {
 
   // 用户注册
   const register = async (registerData: RegisterData) => {
+    // 如果是本地模式，使用本地认证
+    if (isLocalMode && localAuth) {
+      try {
+        loading.value = true
+        error.value = null
+        
+        const result = await localAuth.register(registerData)
+        
+        // 同步到主存储
+        await initializeAuth()
+        
+        return result
+      } catch (err: any) {
+        error.value = localAuth.error || '注册失败'
+        throw err
+      } finally {
+        loading.value = false
+      }
+    }
+    
     if (!supabase) {
       error.value = 'Supabase not configured'
       return { user: null, error: 'Authentication service not available' }
@@ -141,38 +232,52 @@ export const useSupabaseAuthStore = defineStore('supabaseAuth', () => {
       loading.value = true
       error.value = null
 
-      // 1. 创建认证用户（禁用邮件验证）
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      // 1. 创建认证用户（禁用邮件验证）- 添加超时保护
+      const signUpPromise = supabase.auth.signUp({
         email: registerData.email,
         password: registerData.password,
         options: {
           emailRedirectTo: undefined // 禁用邮件验证
         }
       })
+      
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Registration timeout')), 10000) // 10秒超时
+      )
+
+      const { data: authData, error: authError } = await Promise.race([
+        signUpPromise,
+        timeoutPromise
+      ]) as any
 
       if (authError) throw authError
 
       // 2. 创建用户资料
       if (authData.user) {
-        const { data: profileData, error: profileError } = await supabase
-          .from('users')
-          .insert({
-            id: authData.user.id,
-            email: registerData.email,
-            full_name: registerData.full_name,
-            role: registerData.role,
-            is_active: true
-          })
-          .select()
-          .single()
+        try {
+          const { data: profileData, error: profileError } = await supabase
+            .from('users')
+            .insert({
+              id: authData.user.id,
+              email: registerData.email,
+              full_name: registerData.full_name,
+              role: registerData.role,
+              is_active: true
+            })
+            .select()
+            .single()
 
-        if (profileError) {
-          console.error('Profile creation error:', profileError)
-          throw profileError
+          if (profileError) {
+            console.error('Profile creation error:', profileError)
+            throw profileError
+          }
+          
+          // 设置用户信息
+          user.value = profileData
+        } catch (profileError) {
+          console.warn('Failed to create user profile, but auth user created:', profileError)
+          // 不阻塞注册流程，用户可以稍后完善资料
         }
-        
-        // 设置用户信息
-        user.value = profileData
       }
 
       return authData
@@ -188,6 +293,26 @@ export const useSupabaseAuthStore = defineStore('supabaseAuth', () => {
 
   // 用户登录
   const login = async (credentials: LoginCredentials) => {
+    // 如果是本地模式，使用本地认证
+    if (isLocalMode && localAuth) {
+      try {
+        loading.value = true
+        error.value = null
+        
+        const result = await localAuth.login(credentials)
+        
+        // 同步到主存储
+        await initializeAuth()
+        
+        return result
+      } catch (err: any) {
+        error.value = localAuth.error || '登录失败'
+        throw err
+      } finally {
+        loading.value = false
+      }
+    }
+    
     if (!supabase) {
       error.value = 'Supabase not configured'
       return { user: null, session: null, error: 'Authentication service not available' }
@@ -197,17 +322,32 @@ export const useSupabaseAuthStore = defineStore('supabaseAuth', () => {
       loading.value = true
       error.value = null
 
-      const { data, error: loginError } = await supabase.auth.signInWithPassword({
+      // 添加超时保护
+      const loginPromise = supabase.auth.signInWithPassword({
         email: credentials.email,
         password: credentials.password
       })
+      
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Login timeout')), 8000) // 8秒超时
+      )
+
+      const { data, error: loginError } = await Promise.race([
+        loginPromise,
+        timeoutPromise
+      ]) as any
 
       if (loginError) throw loginError
 
       // 立即获取用户资料
       if (data.user) {
         session.value = data.session
-        await fetchUserProfile(data.user.id)
+        try {
+          await fetchUserProfile(data.user.id)
+        } catch (profileError) {
+          console.warn('Failed to fetch user profile after login:', profileError)
+          // 不阻塞登录流程
+        }
       }
 
       return data
@@ -226,6 +366,14 @@ export const useSupabaseAuthStore = defineStore('supabaseAuth', () => {
     try {
       loading.value = true
       error.value = null
+
+      // 如果是本地模式，使用本地认证
+      if (isLocalMode && localAuth) {
+        await localAuth.logout()
+        session.value = null
+        user.value = null
+        return
+      }
 
       // 检查是否有有效的 Supabase 实例和会话
       const hasValidSession = supabase && session.value && session.value.access_token

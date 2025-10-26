@@ -130,12 +130,6 @@ const router = createRouter({
 // 路由守卫
 router.beforeEach(async (to, from, next) => {
   try {
-    // 检查是否配置了 Supabase
-    if (!isSupabaseConfigured) {
-      console.warn('Supabase not configured, allowing access to all routes (demo mode)')
-      return next()
-    }
-    
     // 延迟获取store，确保Pinia已经初始化
     const authStore = useSupabaseAuthStore()
     
@@ -156,14 +150,31 @@ router.beforeEach(async (to, from, next) => {
       return next('/login')
     }
     
+    // 权限检查逻辑（无论是否配置Supabase都要执行）
     if (to.meta.requiresAuth && !authStore.isAuthenticated) {
+      console.log('需要认证但用户未登录，重定向到登录页')
       next('/login')
     } else if (to.meta.requiresGuest && authStore.isAuthenticated) {
       // 根据用户角色重定向
-      next(authStore.user?.role === 'manager' ? '/manager' : '/teacher')
+      const userRole = authStore.user?.role
+      console.log('用户已登录，角色:', userRole)
+      next(userRole === 'manager' ? '/manager' : '/teacher')
     } else if (to.meta.role && authStore.user?.role !== to.meta.role) {
       // 角色权限检查
-      next('/login')
+      console.log('角色权限不匹配:', {
+        required: to.meta.role,
+        actual: authStore.user?.role,
+        path: to.path
+      })
+      // 根据用户实际角色重定向到正确的页面
+      const userRole = authStore.user?.role
+      if (userRole === 'manager') {
+        next('/manager')
+      } else if (userRole === 'teacher') {
+        next('/teacher')
+      } else {
+        next('/login')
+      }
     } else {
       next()
     }
