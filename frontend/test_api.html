@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API连接测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .log { background: #f5f5f5; padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+        button { padding: 10px 20px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <h1>API连接测试</h1>
+    
+    <div>
+        <button onclick="testLogin()">测试登录</button>
+        <button onclick="testCourseTopics()">测试课程主题</button>
+        <button onclick="clearLogs()">清除日志</button>
+    </div>
+    
+    <div id="logs"></div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:8000';
+        let authToken = null;
+        
+        function log(message, type = 'info') {
+            const logs = document.getElementById('logs');
+            const logDiv = document.createElement('div');
+            logDiv.className = `log ${type}`;
+            logDiv.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logs.appendChild(logDiv);
+            console.log(message);
+        }
+        
+        function clearLogs() {
+            document.getElementById('logs').innerHTML = '';
+        }
+        
+        async function testLogin() {
+            log('🔐 开始测试登录...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: 'zhangjing32@51talk.com',
+                        password: 'admin123456'
+                    })
+                });
+                
+                log(`📡 登录响应状态: ${response.status}`, 'info');
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    authToken = data.access_token;
+                    localStorage.setItem('access_token', authToken);
+                    log('✅ 登录成功！Token已保存到localStorage', 'success');
+                    log(`Token: ${authToken.substring(0, 20)}...`, 'info');
+                } else {
+                    const errorText = await response.text();
+                    log(`❌ 登录失败: ${response.status} - ${errorText}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ 登录请求失败: ${error.message}`, 'error');
+                console.error('登录错误详情:', error);
+            }
+        }
+        
+        async function testCourseTopics() {
+            log('📚 开始测试课程主题API...', 'info');
+            
+            // 从localStorage获取token
+            const token = localStorage.getItem('access_token');
+            if (!token) {
+                log('❌ 未找到访问令牌，请先登录', 'error');
+                return;
+            }
+            
+            log(`🔑 使用Token: ${token.substring(0, 20)}...`, 'info');
+            
+            try {
+                const url = `${API_BASE_URL}/api/manager/course-topics`;
+                log(`🌐 请求URL: ${url}`, 'info');
+                
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                log(`📡 课程主题响应状态: ${response.status}`, 'info');
+                log(`📡 响应头: ${JSON.stringify(Object.fromEntries(response.headers.entries()), null, 2)}`, 'info');
+                
+                if (response.ok) {
+                    const topics = await response.json();
+                    log('✅ 课程主题获取成功！', 'success');
+                    log(`📋 主题列表 (${topics.length}个): ${JSON.stringify(topics, null, 2)}`, 'success');
+                } else {
+                    const errorText = await response.text();
+                    log(`❌ 课程主题获取失败: ${response.status} - ${errorText}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ 课程主题请求失败: ${error.message}`, 'error');
+                log(`错误类型: ${error.name}`, 'error');
+                console.error('课程主题错误详情:', error);
+            }
+        }
+        
+        // 页面加载时检查是否有保存的token
+        window.onload = function() {
+            const savedToken = localStorage.getItem('access_token');
+            if (savedToken) {
+                log(`🔑 发现已保存的Token: ${savedToken.substring(0, 20)}...`, 'info');
+                authToken = savedToken;
+            } else {
+                log('ℹ️ 未发现已保存的Token', 'info');
+            }
+        };
+    </script>
+</body>
+</html>

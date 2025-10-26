@@ -84,6 +84,13 @@
           >
         </div>
         <select
+          v-model="topicFilter"
+          class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        >
+          <option value="">全部课程主题</option>
+          <option v-for="topic in courseTopics" :key="topic" :value="topic">{{ topic }}</option>
+        </select>
+        <select
           v-model="statusFilter"
           class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         >
@@ -101,6 +108,12 @@
           <option value="oldest">最早提交</option>
           <option value="score">AI评分</option>
         </select>
+        <button
+          @click="showTopicManagement = true"
+          class="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700"
+        >
+          管理课程主题
+        </button>
       </div>
     </div>
 
@@ -125,7 +138,11 @@
                 </span>
               </div>
 
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div>
+                  <p class="text-sm text-gray-600">课程主题</p>
+                  <p class="text-sm font-medium">{{ lecture.courseTopic || '未设置' }}</p>
+                </div>
                 <div>
                   <p class="text-sm text-gray-600">提交时间</p>
                   <p class="text-sm font-medium">{{ formatDate(lecture.submittedAt) }}</p>
@@ -266,6 +283,14 @@
             <div>
               <form @submit.prevent="submitReview">
                 <div class="mb-4">
+                  <label class="block text-sm font-medium text-gray-700 mb-2">课程主题</label>
+                  <select v-model="reviewForm.courseTopic" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">请选择课程主题</option>
+                    <option v-for="topic in courseTopics" :key="topic" :value="topic">{{ topic }}</option>
+                  </select>
+                </div>
+
+                <div class="mb-4">
                   <label class="block text-sm font-medium text-gray-700 mb-2">评审结果</label>
                   <div class="space-y-2">
                     <label class="flex items-center">
@@ -323,6 +348,101 @@
         </div>
       </div>
     </div>
+
+    <!-- 课程主题管理模态框 -->
+    <div v-if="showTopicManagement" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+      <div class="relative top-10 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+          <h3 class="text-lg font-medium text-gray-900 mb-4">课程主题管理</h3>
+          
+          <!-- 添加新主题 -->
+          <div class="mb-6">
+            <div class="flex gap-3">
+              <input
+                v-model="newTopicName"
+                type="text"
+                placeholder="输入新的课程主题..."
+                class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                @keyup.enter="addTopic"
+              >
+              <button
+                @click="addTopic"
+                :disabled="!newTopicName.trim()"
+                class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:bg-gray-400"
+              >
+                添加
+              </button>
+            </div>
+          </div>
+
+          <!-- 主题列表 -->
+          <div class="mb-6">
+            <h4 class="text-sm font-medium text-gray-700 mb-3">现有课程主题</h4>
+            <div class="space-y-2 max-h-60 overflow-y-auto">
+              <div v-for="(topic, index) in courseTopics" :key="topic" 
+                   class="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
+                <div v-if="editingTopicIndex !== index" class="flex-1">
+                  <span class="text-sm">{{ topic }}</span>
+                </div>
+                <div v-else class="flex-1">
+                  <input
+                    v-model="editingTopicName"
+                    type="text"
+                    class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    @keyup.enter="saveTopicEdit(index)"
+                    @keyup.escape="cancelTopicEdit"
+                  >
+                </div>
+                <div class="flex space-x-2 ml-3">
+                  <button v-if="editingTopicIndex !== index"
+                    @click="startTopicEdit(index, topic)"
+                    class="text-blue-600 hover:text-blue-800 text-sm"
+                  >
+                    编辑
+                  </button>
+                  <button v-if="editingTopicIndex === index"
+                    @click="saveTopicEdit(index)"
+                    class="text-green-600 hover:text-green-800 text-sm"
+                  >
+                    保存
+                  </button>
+                  <button v-if="editingTopicIndex === index"
+                    @click="cancelTopicEdit"
+                    class="text-gray-600 hover:text-gray-800 text-sm"
+                  >
+                    取消
+                  </button>
+                  <button v-if="editingTopicIndex !== index"
+                    @click="deleteTopic(index)"
+                    class="text-red-600 hover:text-red-800 text-sm"
+                  >
+                    删除
+                  </button>
+                </div>
+              </div>
+              <div v-if="courseTopics.length === 0" class="text-center py-4 text-gray-500">
+                暂无课程主题
+              </div>
+            </div>
+          </div>
+
+          <div class="flex justify-end space-x-3">
+            <button
+              @click="showTopicManagement = false"
+              class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300"
+            >
+              关闭
+            </button>
+            <button
+              @click="saveTopicsToServer"
+              class="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700"
+            >
+              保存更改
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -348,6 +468,7 @@ interface Lecture {
   status: 'processing' | 'pending_review' | 'passed' | 'failed'
   submittedAt: string
   videoUrl: string
+  courseTopic?: string
   aiScore?: number
   aiAnalysis?: AIAnalysis
   aiSuggestions?: string
@@ -361,25 +482,39 @@ const lectures = ref<Lecture[]>([])
 // 加载试讲数据
 const loadLectures = async () => {
   try {
-    // TODO: 调用API获取试讲数据
-    // const response = await fetch('/api/manager/lectures')
-    // const data = await response.json()
-    // lectures.value = data
-    console.log('加载试讲数据')
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+    const response = await fetch(`${API_BASE_URL}/api/manager/lectures`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+      }
+    })
+    if (response.ok) {
+      const data = await response.json()
+      lectures.value = data
+    } else {
+      console.error('加载试讲数据失败')
+    }
   } catch (error) {
     console.error('加载试讲数据失败:', error)
   }
 }
 
 const searchQuery = ref('')
+const topicFilter = ref('')
 const statusFilter = ref('')
 const sortBy = ref('newest')
 const showReviewModal = ref(false)
+const showTopicManagement = ref(false)
 const selectedLecture = ref<Lecture | null>(null)
+const courseTopics = ref<string[]>([])
+const newTopicName = ref('')
+const editingTopicIndex = ref<number | null>(null)
+const editingTopicName = ref('')
 const reviewForm = ref({
   result: '',
   feedback: '',
-  score: null as number | null
+  score: null as number | null,
+  courseTopic: ''
 })
 
 const filteredLectures = computed(() => {
@@ -389,6 +524,10 @@ const filteredLectures = computed(() => {
     filtered = filtered.filter(lecture => 
       lecture.teacherName.toLowerCase().includes(searchQuery.value.toLowerCase())
     )
+  }
+
+  if (topicFilter.value) {
+    filtered = filtered.filter(lecture => lecture.courseTopic === topicFilter.value)
   }
 
   if (statusFilter.value) {
@@ -449,7 +588,8 @@ const reviewLecture = (lecture: Lecture) => {
   reviewForm.value = {
     result: '',
     feedback: '',
-    score: null
+    score: null,
+    courseTopic: lecture.courseTopic || ''
   }
   showReviewModal.value = true
 }
@@ -459,35 +599,174 @@ const viewDetails = (lecture: Lecture) => {
   router.push(`/manager/review/${lecture.id}`)
 }
 
-const submitReview = () => {
+const submitReview = async () => {
   if (!selectedLecture.value || !reviewForm.value.result || !reviewForm.value.feedback) {
     alert('请填写完整的评审信息')
     return
   }
 
-  // 更新讲座状态
-  const lecture = selectedLecture.value
-  const result = reviewForm.value.result
-  const feedback = reviewForm.value.feedback
-  
-  if (lecture && result && feedback) {
-    const index = lectures.value.findIndex(l => l.id === lecture.id)
-    if (index > -1) {
-      const lectureItem = lectures.value[index]
-      if (lectureItem) {
-        lectureItem.status = result as 'passed' | 'failed'
-        lectureItem.managerFeedback = feedback
-        lectureItem.reviewedAt = new Date().toISOString()
-      }
-    }
-  }
+  try {
+    const response = await fetch(`/api/manager/lectures/${selectedLecture.value.id}/review`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+      },
+      body: JSON.stringify({
+        result: reviewForm.value.result,
+        feedback: reviewForm.value.feedback,
+        score: reviewForm.value.score,
+        courseTopic: reviewForm.value.courseTopic
+      })
+    })
 
-  showReviewModal.value = false
-  alert('评审提交成功！')
+    if (response.ok) {
+      // 更新本地状态
+      const lecture = selectedLecture.value
+      const index = lectures.value.findIndex(l => l.id === lecture.id)
+      if (index > -1) {
+        const lectureItem = lectures.value[index]
+        if (lectureItem) {
+          lectureItem.status = reviewForm.value.result as 'passed' | 'failed'
+          lectureItem.managerFeedback = reviewForm.value.feedback
+          lectureItem.courseTopic = reviewForm.value.courseTopic
+          lectureItem.reviewedAt = new Date().toISOString()
+        }
+      }
+      
+      showReviewModal.value = false
+      alert('评审提交成功！')
+    } else {
+      alert('评审提交失败，请重试')
+    }
+  } catch (error) {
+    console.error('提交评审失败:', error)
+    alert('评审提交失败，请重试')
+  }
+}
+
+// 课程主题管理函数
+const loadCourseTopics = async () => {
+  try {
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+    const token = localStorage.getItem('access_token')
+    
+    console.log('🔍 调试信息:')
+    console.log('  API_BASE_URL:', API_BASE_URL)
+    console.log('  Token存在:', !!token)
+    console.log('  完整URL:', `${API_BASE_URL}/api/manager/course-topics`)
+    
+    if (!token) {
+      console.error('❌ 未找到访问令牌')
+      throw new Error('未找到访问令牌，请重新登录')
+    }
+    
+    const response = await fetch(`${API_BASE_URL}/api/manager/course-topics`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    })
+    
+    console.log('📡 API响应状态:', response.status)
+    console.log('📡 API响应头:', Object.fromEntries(response.headers.entries()))
+    
+    if (response.ok) {
+      const topics = await response.json()
+      console.log('✅ 成功加载课程主题:', topics)
+      courseTopics.value = [...topics]
+    } else {
+      const errorText = await response.text()
+      console.error('❌ 加载课程主题失败:', response.status, errorText)
+      // 使用默认主题作为后备
+      const defaultTopics = [
+        '数学基础概念',
+        '语文阅读理解',
+        '英语口语交流',
+        '科学实验探索',
+        '历史文化传承'
+      ]
+      courseTopics.value = [...defaultTopics]
+    }
+  } catch (error) {
+    console.error('❌ 加载课程主题时出错:', error)
+    console.error('错误详情:', {
+      name: error instanceof Error ? error.name : 'Unknown',
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    })
+    // 使用默认主题作为后备
+    const defaultTopics = [
+      '数学基础概念',
+      '语文阅读理解',
+      '英语口语交流',
+      '科学实验探索',
+      '历史文化传承'
+    ]
+    courseTopics.value = [...defaultTopics]
+  }
+}
+
+const addTopic = () => {
+  const topic = newTopicName.value.trim()
+  if (topic && !courseTopics.value.includes(topic)) {
+    courseTopics.value.push(topic)
+    newTopicName.value = ''
+  }
+}
+
+const startTopicEdit = (index: number, topic: string) => {
+  editingTopicIndex.value = index
+  editingTopicName.value = topic
+}
+
+const saveTopicEdit = (index: number) => {
+  const newName = editingTopicName.value.trim()
+  if (newName && !courseTopics.value.includes(newName)) {
+    courseTopics.value[index] = newName
+  }
+  cancelTopicEdit()
+}
+
+const cancelTopicEdit = () => {
+  editingTopicIndex.value = null
+  editingTopicName.value = ''
+}
+
+const deleteTopic = (index: number) => {
+  if (confirm('确定要删除这个课程主题吗？')) {
+    courseTopics.value.splice(index, 1)
+  }
+}
+
+const saveTopicsToServer = async () => {
+  try {
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+    const response = await fetch(`${API_BASE_URL}/api/manager/course-topics/batch`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+      },
+      body: JSON.stringify({ topics: courseTopics.value })
+    })
+    
+    if (response.ok) {
+      alert('课程主题保存成功！')
+      showTopicManagement.value = false
+    } else {
+      alert('保存失败，请重试')
+    }
+  } catch (error) {
+    console.error('保存课程主题失败:', error)
+    alert('保存失败，请重试')
+  }
 }
 
 // 生命周期
 onMounted(() => {
   loadLectures()
+  loadCourseTopics()
 })
 </script>

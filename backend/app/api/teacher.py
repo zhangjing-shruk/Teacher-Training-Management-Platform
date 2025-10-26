@@ -56,10 +56,6 @@ class PracticeModeResponse(BaseModel):
 class CourseTopicResponse(BaseModel):
     id: int
     name: str
-    description: str
-    subject: str
-    grade_level: str
-    keywords: str = None
     
     class Config:
         from_attributes = True
@@ -195,17 +191,11 @@ async def get_course_topics(
     db: Session = Depends(get_db)
 ):
     """获取课程主题列表"""
-    topics = db.query(CourseTopic).filter(
-        CourseTopic.is_active == True
-    ).order_by(CourseTopic.order_index).all()
+    topics = db.query(CourseTopic).all()
     
     return [CourseTopicResponse(
         id=topic.id,
-        name=topic.name,
-        description=topic.description or "",
-        subject=topic.subject or "",
-        grade_level=topic.grade_level or "",
-        keywords=topic.keywords
+        name=topic.name
     ) for topic in topics]
 
 

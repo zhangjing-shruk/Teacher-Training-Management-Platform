@@ -29,11 +29,28 @@ export interface LocalRegisterData {
   role: string
 }
 
+// 学习进度接口
+export interface LocalLearningProgress {
+  id: string
+  user_id: string
+  material_id: string
+  material_title: string
+  start_time: number
+  last_active_time: number
+  total_study_seconds: number
+  progress_percentage: number
+  is_completed: boolean
+  created_at: string
+  updated_at: string
+}
+
 export const useLocalAuthStore = defineStore('localAuth', () => {
-  const session = ref<LocalSession | null>(null)
+  // 状态
   const user = ref<LocalUser | null>(null)
+  const session = ref<LocalSession | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
+  const learningProgress = ref<Record<string, LocalLearningProgress>>({})
 
   // 计算属性
   const isAuthenticated = computed(() => !!session.value && !!user.value)
@@ -94,12 +111,110 @@ export const useLocalAuthStore = defineStore('localAuth', () => {
         session.value = storedSession
         user.value = storedSession.user
       }
+      loadLearningProgress()
     } catch (err: any) {
       console.warn('Failed to initialize local auth:', err)
       error.value = '认证初始化失败'
     } finally {
       loading.value = false
     }
+  }
+
+  // 学习进度管理函数
+  const loadLearningProgress = () => {
+    try {
+      const saved = localStorage.getItem('local_learning_progress')
+      if (saved) {
+        learningProgress.value = JSON.parse(saved)
+      }
+    } catch (error) {
+      console.error('加载学习进度失败:', error)
+    }
+  }
+
+  const saveLearningProgress = () => {
+    try {
+      localStorage.setItem('local_learning_progress', JSON.stringify(learningProgress.value))
+    } catch (error) {
+      console.error('保存学习进度失败:', error)
+    }
+  }
+
+  const startLearning = (materialId: string, materialTitle: string) => {
+    if (!user.value) return null
+
+    const progressKey = `${user.value.id}_${materialId}`
+    const now = Date.now()
+    
+    if (!learningProgress.value[progressKey]) {
+      learningProgress.value[progressKey] = {
+        id: generateId(),
+        user_id: user.value.id,
+        material_id: materialId,
+        material_title: materialTitle,
+        start_time: now,
+        last_active_time: now,
+        total_study_seconds: 0,
+        progress_percentage: 0,
+        is_completed: false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+    } else {
+      learningProgress.value[progressKey].last_active_time = now
+      learningProgress.value[progressKey].updated_at = new Date().toISOString()
+    }
+    
+    saveLearningProgress()
+    return learningProgress.value[progressKey]
+  }
+
+  const updateLearningProgress = (materialId: string, studySeconds: number) => {
+    if (!user.value) return null
+
+    const progressKey = `${user.value.id}_${materialId}`
+    const progress = learningProgress.value[progressKey]
+    
+    if (progress) {
+      progress.total_study_seconds += studySeconds
+      progress.last_active_time = Date.now()
+      progress.updated_at = new Date().toISOString()
+      
+      // 简单的进度计算：假设10分钟完成100%
+      const targetMinutes = 10
+      const progressPercentage = Math.min(100, (progress.total_study_seconds / (targetMinutes * 60)) * 100)
+      progress.progress_percentage = Math.round(progressPercentage)
+      
+      if (progress.progress_percentage >= 100) {
+        progress.is_completed = true
+      }
+      
+      saveLearningProgress()
+      return progress
+    }
+    
+    return null
+  }
+
+  const getUserLearningProgress = (materialId?: string) => {
+    if (!user.value) return []
+
+    const userProgress = Object.values(learningProgress.value).filter(
+      progress => progress.user_id === user.value!.id
+    )
+
+    if (materialId) {
+      return userProgress.filter(progress => progress.material_id === materialId)
+    }
+
+    return userProgress
+  }
+
+  const getLearningProgressByMaterial = (materialId: string) => {
+    if (!user.value) return null
+
+    const progressKey = `${user.value.id}_${materialId}`
+    return learningProgress.value[progressKey] || null
   }
 
   // 用户登录
@@ -287,6 +402,7 @@ export const useLocalAuthStore = defineStore('localAuth', () => {
     user: computed(() => user.value),
     loading: computed(() => loading.value),
     error: computed(() => error.value),
+    learningProgress: computed(() => learningProgress.value),
     
     // 计算属性
     isAuthenticated,
@@ -298,6 +414,12 @@ export const useLocalAuthStore = defineStore('localAuth', () => {
     login,
     register,
     logout,
-    resetPassword
+    resetPassword,
+    
+    // 学习进度方法
+    startLearning,
+    updateLearningProgress,
+    getUserLearningProgress,
+    getLearningProgressByMaterial
   }
 })

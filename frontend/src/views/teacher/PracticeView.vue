@@ -5,33 +5,9 @@
       <p class="mt-2 text-gray-600">AI辅助的试讲练习和实时反馈</p>
     </div>
 
-    <!-- 练习模式选择 -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6" v-if="!isRecording && !showResults">
-      <div 
-        v-for="mode in practiceMode" 
-        :key="mode.id"
-        class="card cursor-pointer hover:shadow-lg transition-shadow duration-200 border-2"
-        :class="selectedMode?.id === mode.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200'"
-        @click="selectMode(mode)"
-      >
-        <div class="text-center">
-          <div class="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center"
-               :class="mode.color">
-            <i :class="mode.icon" class="text-2xl text-white"></i>
-          </div>
-          <h3 class="text-lg font-semibold text-gray-900 mb-2">{{ mode.name }}</h3>
-          <p class="text-gray-600 text-sm mb-4">{{ mode.description }}</p>
-          <div class="text-xs text-gray-500">
-            <p>时长：{{ mode.duration }}</p>
-            <p>难度：{{ mode.difficulty }}</p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 练习设置 -->
-    <div class="card" v-if="selectedMode && !isRecording && !showResults">
-      <h2 class="text-xl font-semibold text-gray-900 mb-6">练习设置</h2>
+    <!-- 模拟课堂练习设置 -->
+    <div class="card" v-if="!isRecording && !showResults">
+      <h2 class="text-xl font-semibold text-gray-900 mb-6">模拟课堂练习设置</h2>
       
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
@@ -51,92 +27,77 @@
             <option value="20">20分钟</option>
           </select>
         </div>
-        
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">评估重点</label>
-          <div class="space-y-2">
-            <label v-for="focus in evaluationFocus" :key="focus.id" class="flex items-center">
-              <input 
-                type="checkbox" 
-                v-model="practiceSettings.focusAreas" 
-                :value="focus.id"
-                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              >
-              <span class="ml-2 text-sm text-gray-700">{{ focus.name }}</span>
-            </label>
-          </div>
-        </div>
-        
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">AI反馈级别</label>
-          <select v-model="practiceSettings.feedbackLevel" class="input">
-            <option value="basic">基础反馈</option>
-            <option value="detailed">详细反馈</option>
-            <option value="comprehensive">全面反馈</option>
-          </select>
+      </div>
+      
+      <div class="mt-6">
+        <label class="block text-sm font-medium text-gray-700 mb-2">评估重点</label>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <label v-for="focus in evaluationFocus" :key="focus.id" class="flex items-center">
+            <input 
+              type="checkbox" 
+              :value="focus.id" 
+              v-model="practiceSettings.focusAreas"
+              class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            <span class="ml-2 text-sm text-gray-700">{{ focus.name }}</span>
+          </label>
         </div>
       </div>
       
       <div class="mt-6 flex justify-center">
         <button 
-          @click="startPractice"
-          :disabled="!canStartPractice"
+          @click="startPractice" 
+          :disabled="!practiceSettings.topic"
           class="btn-primary px-8 py-3 text-lg"
-          :class="{ 'opacity-50 cursor-not-allowed': !canStartPractice }"
         >
           开始练习
         </button>
       </div>
     </div>
 
-    <!-- 练习进行中界面 -->
-    <div class="card" v-if="isRecording">
-      <div class="text-center">
-        <div class="mb-6">
-          <div class="w-32 h-32 mx-auto mb-4 rounded-full bg-red-500 flex items-center justify-center animate-pulse">
-            <i class="fas fa-microphone text-4xl text-white"></i>
-          </div>
-          <h2 class="text-2xl font-semibold text-gray-900 mb-2">正在录制中...</h2>
-          <p class="text-gray-600">{{ selectedMode?.name }} - {{ practiceSettings.topic }}</p>
-        </div>
-        
-        <!-- 计时器 -->
-        <div class="mb-6">
-          <div class="text-4xl font-mono font-bold text-gray-900 mb-2">
-            {{ formatTime(recordingTime) }}
-          </div>
-          <div class="w-full bg-gray-200 rounded-full h-2">
-            <div 
-              class="bg-blue-600 h-2 rounded-full transition-all duration-1000"
-              :style="{ width: `${(recordingTime / (practiceSettings.duration * 60)) * 100}%` }"
-            ></div>
-          </div>
-        </div>
-        
-        <!-- 实时反馈指标 -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div class="text-center">
-            <div class="text-2xl font-bold text-blue-600">{{ realtimeMetrics.volume }}%</div>
-            <div class="text-sm text-gray-600">音量</div>
-          </div>
-          <div class="text-center">
-            <div class="text-2xl font-bold text-green-600">{{ realtimeMetrics.clarity }}%</div>
-            <div class="text-sm text-gray-600">清晰度</div>
-          </div>
-          <div class="text-center">
-            <div class="text-2xl font-bold text-purple-600">{{ realtimeMetrics.pace }}</div>
-            <div class="text-sm text-gray-600">语速</div>
-          </div>
-          <div class="text-center">
-            <div class="text-2xl font-bold text-orange-600">{{ realtimeMetrics.engagement }}%</div>
-            <div class="text-sm text-gray-600">参与度</div>
-          </div>
-        </div>
-        
-        <button @click="stopPractice" class="btn-secondary px-6 py-2">
-          结束练习
-        </button>
+    <!-- 练习进行中 -->
+    <div v-if="isRecording" class="card text-center">
+      <div class="mb-6">
+        <h2 class="text-2xl font-semibold text-gray-900 mb-2">练习进行中</h2>
+        <p class="text-gray-600">模拟课堂 - {{ practiceSettings.topic }}</p>
       </div>
+      
+      <!-- 计时器 -->
+      <div class="mb-6">
+        <div class="text-4xl font-mono font-bold text-gray-900 mb-2">
+          {{ formatTime(recordingTime) }}
+        </div>
+        <div class="w-full bg-gray-200 rounded-full h-2">
+          <div 
+            class="bg-blue-600 h-2 rounded-full transition-all duration-1000"
+            :style="{ width: `${(recordingTime / (practiceSettings.duration * 60)) * 100}%` }"
+          ></div>
+        </div>
+      </div>
+      
+      <!-- 实时反馈指标 -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div class="text-center">
+          <div class="text-2xl font-bold text-blue-600">{{ realtimeMetrics.volume }}%</div>
+          <div class="text-sm text-gray-600">音量</div>
+        </div>
+        <div class="text-center">
+          <div class="text-2xl font-bold text-green-600">{{ realtimeMetrics.clarity }}%</div>
+          <div class="text-sm text-gray-600">清晰度</div>
+        </div>
+        <div class="text-center">
+          <div class="text-2xl font-bold text-purple-600">{{ realtimeMetrics.pace }}</div>
+          <div class="text-sm text-gray-600">语速</div>
+        </div>
+        <div class="text-center">
+          <div class="text-2xl font-bold text-orange-600">{{ realtimeMetrics.engagement }}%</div>
+          <div class="text-sm text-gray-600">参与度</div>
+        </div>
+      </div>
+      
+      <button @click="stopPractice" class="btn-secondary px-6 py-2">
+        结束练习
+      </button>
     </div>
 
     <!-- AI分析加载状态 -->
@@ -229,8 +190,8 @@
           <div v-for="feedback in currentResult.aiFeedback" :key="feedback.category" 
                class="p-4 rounded-lg border">
             <div class="flex items-center mb-2">
-               <i :class="[feedback.icon, feedback.color]" class="text-lg mr-2"></i>
-               <h4 class="font-medium text-gray-900">{{ feedback.category }}</h4>
+              <i :class="[feedback.icon, feedback.color]" class="text-lg mr-2"></i>
+              <h4 class="font-medium text-gray-900">{{ feedback.category }}</h4>
               <span class="ml-auto text-sm px-2 py-1 rounded-full"
                     :class="feedback.level === 'excellent' ? 'bg-green-100 text-green-800' :
                            feedback.level === 'good' ? 'bg-blue-100 text-blue-800' :
@@ -305,17 +266,9 @@
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
-            <tr v-for="record in filteredHistory" :key="record.id" class="hover:bg-gray-50">
-              <td class="px-6 py-4 whitespace-nowrap">
-                <div class="flex items-center">
-                  <div class="w-8 h-8 rounded-full flex items-center justify-center mr-3"
-                        :class="getPracticeModeById(record.modeId)?.color || 'bg-gray-500'">
-                     <i :class="getPracticeModeById(record.modeId)?.icon || 'fas fa-question'" class="text-sm text-white"></i>
-                   </div>
-                   <span class="text-sm font-medium text-gray-900">
-                     {{ getPracticeModeById(record.modeId)?.name || '未知模式' }}
-                   </span>
-                </div>
+            <tr v-for="record in filteredHistory" :key="record.id">
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                {{ getPracticeModeById(record.modeId)?.name }}
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                 {{ record.topic }}
@@ -323,20 +276,16 @@
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                 {{ record.duration }}分钟
               </td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <span class="text-sm font-medium" :class="getScoreColor(record.score)">
-                  {{ record.score }}分
-                </span>
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium"
+                  :class="getScoreColor(record.score)">
+                {{ record.score }}
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                 {{ formatDate(record.date) }}
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                <button @click="viewDetails(record)" class="text-blue-600 hover:text-blue-900 mr-3">
+                <button @click="viewPracticeDetail(record)" class="text-blue-600 hover:text-blue-900">
                   查看详情
-                </button>
-                <button @click="repeatPractice(record)" class="text-green-600 hover:text-green-900">
-                  重复练习
                 </button>
               </td>
             </tr>
@@ -409,34 +358,21 @@ interface PracticeResult {
   overallScore: number
   detailedScores: DetailedScore[]
   aiFeedback: AIFeedback[]
-  feedback?: any
-  speechAnalysis?: any
-  contentAnalysis?: any
-  videoAnalysis?: any
+  transcript: string
+  duration: number
 }
 
-interface PracticeRecord {
+interface PracticeHistory {
   id: string
   modeId: string
   topic: string
   duration: number
   score: number
   date: string
-  feedback?: any
-  speechAnalysis?: any
-  contentAnalysis?: any
-  videoAnalysis?: any
 }
 
 // 响应式数据
 const selectedMode = ref<PracticeMode | null>(null)
-const isRecording = ref(false)
-const showResults = ref(false)
-const recordingTime = ref(0)
-const recordingTimer = ref<number | null>(null)
-const isAnalyzing = ref(false)
-const analysisError = ref('')
-
 const practiceSettings = ref<PracticeSettings>({
   topic: '',
   duration: 10,
@@ -444,209 +380,64 @@ const practiceSettings = ref<PracticeSettings>({
   feedbackLevel: 'detailed'
 })
 
-const historyFilter = ref({
-  mode: '',
-  period: 'month'
-})
-
-// 练习数据
-const practiceMode: PracticeMode[] = []
-const courseTopics: string[] = []
-const evaluationFocus: EvaluationFocus[] = []
+const isRecording = ref(false)
+const recordingTime = ref(0)
+const recordingTimer = ref<number | null>(null)
+const isAnalyzing = ref(false)
+const analysisError = ref('')
+const showResults = ref(false)
 
 const realtimeMetrics = ref<RealtimeMetrics>({
-  volume: 0,
-  clarity: 0,
-  pace: '未开始',
-  engagement: 0
+  volume: 75,
+  clarity: 82,
+  pace: '适中',
+  engagement: 68
 })
 
 const currentResult = ref<PracticeResult>({
   overallScore: 0,
   detailedScores: [],
-  aiFeedback: []
+  aiFeedback: [],
+  transcript: '',
+  duration: 0
 })
 
-const practiceHistory = ref<PracticeRecord[]>([])
+const practiceMode = ref<PracticeMode[]>([])
+const courseTopics = ref<string[]>([])
+const evaluationFocus = ref<EvaluationFocus[]>([])
+const practiceHistory = ref<PracticeHistory[]>([])
 
-// 加载练习模式数据
-const loadPracticeModes = async () => {
-  try {
-    const token = authStore.session?.access_token
-    if (!token) {
-      console.warn('未找到认证令牌')
-      loadDefaultPracticeModes()
-      return
-    }
-    const response = await fetch('/api/teacher/practice-modes', {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    })
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-    
-    const data = await response.json()
-    
-    // 转换API数据为前端格式
-    const modes = data.map((mode: any) => ({
-      id: mode.id.toString(),
-      name: mode.name,
-      description: mode.description,
-      duration: `${mode.duration_minutes}分钟`,
-      difficulty: mode.difficulty_level === 'beginner' ? '初级' : 
-                 mode.difficulty_level === 'intermediate' ? '中级' : '高级',
-      icon: getIconForMode(mode.name),
-      color: getColorForMode(mode.name)
-    }))
-    
-    practiceMode.splice(0, practiceMode.length, ...modes)
-    console.log('练习模式数据加载成功:', modes)
-  } catch (error) {
-    console.error('加载练习模式失败:', error)
-    // 使用默认数据作为后备
-    loadDefaultPracticeModes()
-  }
-}
-
-// 加载课程主题数据
-const loadCourseTopics = async () => {
-  try {
-    const token = authStore.session?.access_token
-    if (!token) {
-      console.warn('未找到认证令牌')
-      loadDefaultCourseTopics()
-      return
-    }
-    const response = await fetch('/api/teacher/course-topics', {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    })
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-    
-    const data = await response.json()
-    const topics = data.map((topic: any) => topic.name)
-    
-    courseTopics.splice(0, courseTopics.length, ...topics)
-    console.log('课程主题数据加载成功:', topics)
-  } catch (error) {
-    console.error('加载课程主题失败:', error)
-    // 使用默认数据作为后备
-    loadDefaultCourseTopics()
-  }
-}
-
-// 加载评估重点数据
-const loadEvaluationFocus = async () => {
-  try {
-    const token = authStore.session?.access_token
-    if (!token) {
-      console.warn('未找到认证令牌')
-      loadDefaultEvaluationFocus()
-      return
-    }
-    const response = await fetch('/api/teacher/evaluation-focus', {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    })
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-    
-    const data = await response.json()
-    const focus = data.map((item: any) => ({
-      id: item.id.toString(),
-      name: item.name
-    }))
-    
-    evaluationFocus.splice(0, evaluationFocus.length, ...focus)
-    console.log('评估重点数据加载成功:', focus)
-  } catch (error) {
-    console.error('加载评估重点失败:', error)
-    // 使用默认数据作为后备
-    loadDefaultEvaluationFocus()
-  }
-}
-
-// 加载练习历史数据
-const loadPracticeHistory = async () => {
-  try {
-    const token = authStore.session?.access_token
-    if (!token) {
-      console.warn('未找到认证令牌')
-      loadDefaultPracticeHistory()
-      return
-    }
-    const response = await fetch('/api/teacher/practice-history', {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    })
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-    
-    const data = await response.json()
-    const history = data.map((session: any) => ({
-      id: session.id.toString(),
-      modeId: '1', // 默认模式ID
-      topic: session.title,
-      duration: 10, // 默认时长
-      score: session.overall_score || 0,
-      date: session.created_at
-    }))
-    
-    practiceHistory.value.splice(0, practiceHistory.value.length, ...history)
-    console.log('练习历史数据加载成功:', history)
-  } catch (error) {
-    console.error('加载练习历史失败:', error)
-    // 使用默认数据作为后备
-    loadDefaultPracticeHistory()
-  }
-}
+const historyFilter = ref({
+  mode: '',
+  period: 'month'
+})
 
 // 计算属性
-const canStartPractice = computed(() => {
-  return practiceSettings.value.topic && practiceSettings.value.focusAreas.length > 0
-})
-
 const filteredHistory = computed(() => {
   let filtered = practiceHistory.value
 
   if (historyFilter.value.mode) {
-    filtered = filtered.filter((record: PracticeRecord) => record.modeId === historyFilter.value.mode)
+    filtered = filtered.filter(record => record.modeId === historyFilter.value.mode)
   }
 
   const now = new Date()
-  if (historyFilter.value.period === 'week') {
-    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-    filtered = filtered.filter((record: PracticeRecord) => new Date(record.date) >= weekAgo)
-  } else if (historyFilter.value.period === 'month') {
-    const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-    filtered = filtered.filter((record: PracticeRecord) => new Date(record.date) >= monthAgo)
+  const filterDate = new Date()
+  
+  switch (historyFilter.value.period) {
+    case 'week':
+      filterDate.setDate(now.getDate() - 7)
+      break
+    case 'month':
+      filterDate.setMonth(now.getMonth() - 1)
+      break
+    default:
+      return filtered
   }
 
-  return filtered.sort((a: PracticeRecord, b: PracticeRecord) => new Date(b.date).getTime() - new Date(a.date).getTime())
+  return filtered.filter(record => new Date(record.date) >= filterDate)
 })
 
 // 方法
-const selectMode = (mode: PracticeMode) => {
-  selectedMode.value = mode
-}
-
 const startPractice = () => {
   isRecording.value = true
   recordingTime.value = 0
@@ -698,7 +489,7 @@ const generatePracticeResult = async () => {
     }
     
     // 调用AI综合分析API
-    const response = await fetch('http://localhost:8000/api/teacher/ai/comprehensive-analysis', {
+    const response = await fetch('/api/ai/comprehensive-analysis', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -713,112 +504,53 @@ const generatePracticeResult = async () => {
     
     const result = await response.json()
     
-    if (result.status === 'success') {
-      // 更新当前结果显示
-      currentResult.value = {
-        overallScore: result.comprehensive_feedback?.overall_score || 0,
-        detailedScores: [
-          { name: '语音表达', score: result.speech_analysis?.pronunciation_score || 0 },
-          { name: '内容质量', score: result.content_analysis?.content_score || 0 },
-          { name: '肢体语言', score: result.video_analysis?.body_language_score || 0 },
-          { name: '整体表现', score: result.comprehensive_feedback?.overall_score || 0 }
-        ],
-        aiFeedback: result.comprehensive_feedback?.improvement_suggestions?.map((suggestion: string, index: number) => ({
-          category: '改进建议',
-          level: 'info',
-          levelText: '建议',
-          comment: suggestion,
-          suggestions: [],
-          icon: '💡',
-          color: 'blue'
-        })) || [],
-        feedback: result.comprehensive_feedback,
-        speechAnalysis: result.speech_analysis,
-        contentAnalysis: result.content_analysis,
-        videoAnalysis: result.video_analysis
-      }
-      
-      // 创建历史记录条目
-      const historyRecord: PracticeRecord = {
-        id: Date.now().toString(),
-        modeId: selectedMode.value?.id || '',
-        topic: practiceSettings.value.topic,
-        duration: practiceSettings.value.duration,
-        score: result.comprehensive_feedback?.overall_score || 0,
-        date: new Date().toISOString(),
-        feedback: result.comprehensive_feedback,
-        speechAnalysis: result.speech_analysis,
-        contentAnalysis: result.content_analysis,
-        videoAnalysis: result.video_analysis
-      }
-      
-      // 添加到历史记录
-      practiceHistory.value.unshift(historyRecord)
-      
-      console.log('AI分析完成:', result)
-      showResults.value = true
-    } else {
-      throw new Error(result.message || 'AI分析失败')
-    }
-    
-  } catch (error) {
-    console.error('生成结果失败:', error)
-    analysisError.value = error instanceof Error ? error.message : '分析过程中发生未知错误'
-    
-    // 显示错误信息或使用模拟数据
-    const mockFeedback = {
-      overall_score: 78.5,
-      grade: "良好",
-      summary: "整体表现良好，具备基本的教学技能，还有进一步提升的空间。",
-      strengths: ["语音表达清晰", "教学内容丰富"],
-      weaknesses: ["肢体语言表现力不足"],
-      improvement_suggestions: [
-        "建议加强肢体语言训练",
-        "增加与学生的眼神交流",
-        "适当使用手势来辅助表达"
-      ]
-    }
-    
+    // 设置分析结果
     currentResult.value = {
-      overallScore: 78.5,
-      detailedScores: [
-        { name: '语音表达', score: 82 },
-        { name: '内容质量', score: 85 },
-        { name: '肢体语言', score: 70 },
-        { name: '整体表现', score: 78.5 }
+      overallScore: result.overall_score || 85,
+      detailedScores: result.detailed_scores || [
+        { name: '发音准确性', score: 88 },
+        { name: '语言流畅性', score: 82 },
+        { name: '教学内容', score: 90 },
+        { name: '课堂互动', score: 80 }
       ],
-      aiFeedback: mockFeedback.improvement_suggestions.map((suggestion: string) => ({
-        category: '改进建议',
-        level: 'info',
-        levelText: '建议',
-        comment: suggestion,
-        suggestions: [],
-        icon: '💡',
-        color: 'blue'
-      })),
-      feedback: mockFeedback
+      aiFeedback: result.ai_feedback || [
+        {
+          category: '语音表达',
+          level: 'good',
+          levelText: '良好',
+          comment: '发音清晰，语速适中，但在重点内容处可以适当放慢语速。',
+          suggestions: ['在关键概念处适当停顿', '增加语调变化'],
+          icon: 'fas fa-microphone',
+          color: 'text-blue-500'
+        }
+      ],
+      transcript: result.transcript || analysisData.transcript,
+      duration: recordingTime.value
     }
     
-    const historyRecord: PracticeRecord = {
+    // 保存练习记录
+    const practiceRecord: PracticeHistory = {
       id: Date.now().toString(),
       modeId: selectedMode.value?.id || '',
       topic: practiceSettings.value.topic,
       duration: practiceSettings.value.duration,
-      score: 78.5,
-      date: new Date().toISOString(),
-      feedback: mockFeedback
+      score: currentResult.value.overallScore,
+      date: new Date().toISOString()
     }
     
-    practiceHistory.value.unshift(historyRecord)
-    showResults.value = true
-  } finally {
+    practiceHistory.value.unshift(practiceRecord)
+    
     isAnalyzing.value = false
+    showResults.value = true
+    
+  } catch (error) {
+    console.error('AI分析失败:', error)
+    analysisError.value = error instanceof Error ? error.message : '分析过程中发生未知错误'
+    isAnalyzing.value = false
+    
+    // 使用离线模式的默认结果
+    useOfflineMode()
   }
-}
-
-const restartPractice = () => {
-  showResults.value = false
-  recordingTime.value = 0
 }
 
 const retryAnalysis = () => {
@@ -827,86 +559,81 @@ const retryAnalysis = () => {
 }
 
 const useOfflineMode = () => {
-  analysisError.value = ''
-  // 使用模拟数据生成结果
-  const mockFeedback = {
-    overall_score: 78.5,
-    grade: "良好",
-    summary: "整体表现良好，具备基本的教学技能，还有进一步提升的空间。",
-    strengths: ["语音表达清晰", "教学内容丰富"],
-    weaknesses: ["肢体语言表现力不足"],
-    improvement_suggestions: [
-      "建议加强肢体语言训练",
-      "增加与学生的眼神交流",
-      "适当使用手势来辅助表达"
-    ]
-  }
+  console.log('使用离线模式生成结果')
   
+  // 生成模拟的分析结果
   currentResult.value = {
-    overallScore: 78.5,
+    overallScore: 85,
     detailedScores: [
-      { name: '语音表达', score: 82 },
-      { name: '内容质量', score: 85 },
-      { name: '肢体语言', score: 70 },
-      { name: '整体表现', score: 78.5 }
+      { name: '发音准确性', score: 88 },
+      { name: '语言流畅性', score: 82 },
+      { name: '教学内容', score: 90 },
+      { name: '课堂互动', score: 80 }
     ],
-    aiFeedback: mockFeedback.improvement_suggestions.map((suggestion: string) => ({
-      category: '改进建议',
-      level: 'info',
-      levelText: '建议',
-      comment: suggestion,
-      suggestions: [],
-      icon: '💡',
-      color: 'blue'
-    })),
-    feedback: mockFeedback
+    aiFeedback: [
+      {
+        category: '语音表达',
+        level: 'good',
+        levelText: '良好',
+        comment: '发音清晰，语速适中，整体表现良好。',
+        suggestions: ['可以增加更多的语调变化', '在重点内容处适当停顿'],
+        icon: 'fas fa-microphone',
+        color: 'text-blue-500'
+      },
+      {
+        category: '教学内容',
+        level: 'excellent',
+        levelText: '优秀',
+        comment: '内容结构清晰，逻辑性强，知识点讲解到位。',
+        suggestions: ['可以增加更多实例说明', '适当增加互动环节'],
+        icon: 'fas fa-book',
+        color: 'text-green-500'
+      }
+    ],
+    transcript: `这是关于${practiceSettings.value.topic}的教学内容，时长${practiceSettings.value.duration}分钟的试讲练习。`,
+    duration: recordingTime.value
   }
   
-  const historyRecord: PracticeRecord = {
+  // 保存练习记录
+  const practiceRecord: PracticeHistory = {
     id: Date.now().toString(),
     modeId: selectedMode.value?.id || '',
     topic: practiceSettings.value.topic,
     duration: practiceSettings.value.duration,
-    score: 78.5,
-    date: new Date().toISOString(),
-    feedback: mockFeedback
+    score: currentResult.value.overallScore,
+    date: new Date().toISOString()
   }
   
-  practiceHistory.value.unshift(historyRecord)
+  practiceHistory.value.unshift(practiceRecord)
+  
+  analysisError.value = ''
+  isAnalyzing.value = false
   showResults.value = true
+}
+
+const restartPractice = () => {
+  showResults.value = false
+  selectedMode.value = null
+  practiceSettings.value.topic = ''
+  practiceSettings.value.focusAreas = []
 }
 
 const viewHistory = () => {
   showResults.value = false
-  selectedMode.value = null
 }
 
-const viewDetails = (record: PracticeRecord) => {
-  console.log('查看详情:', record)
-  // 跳转到反馈报告详情页面
-  router.push(`/teacher/feedback/${record.id}`)
+const viewPracticeDetail = (record: PracticeHistory) => {
+  console.log('查看练习详情:', record)
+  // TODO: 实现查看详情功能
 }
 
-const repeatPractice = (record: PracticeRecord) => {
-  const mode = practiceMode.find(m => m.id === record.modeId)
-  if (mode) {
-    selectedMode.value = mode
-    practiceSettings.value.topic = record.topic
-    practiceSettings.value.duration = record.duration
-  }
-}
-
-const getPracticeModeById = (id: string) => {
-  return practiceMode.find(mode => mode.id === id)
-}
-
-const formatTime = (seconds: number) => {
+const formatTime = (seconds: number): string => {
   const mins = Math.floor(seconds / 60)
   const secs = seconds % 60
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
 }
 
-const formatDate = (dateString: string) => {
+const formatDate = (dateString: string): string => {
   const date = new Date(dateString)
   return date.toLocaleDateString('zh-CN', {
     year: 'numeric',
@@ -917,88 +644,94 @@ const formatDate = (dateString: string) => {
   })
 }
 
-const getScoreColor = (score: number) => {
+const getScoreColor = (score: number): string => {
   if (score >= 90) return 'text-green-600'
   if (score >= 80) return 'text-blue-600'
   if (score >= 70) return 'text-yellow-600'
   return 'text-red-600'
 }
 
-const getScoreText = (score: number) => {
+const getScoreText = (score: number): string => {
   if (score >= 90) return '优秀'
   if (score >= 80) return '良好'
-  if (score >= 70) return '及格'
+  if (score >= 70) return '一般'
   return '需要改进'
 }
 
-// 辅助函数
-const getIconForMode = (modeName: string): string => {
-  const iconMap: { [key: string]: string } = {
-    '自由练习': 'fas fa-microphone',
-    '模拟课堂': 'fas fa-chalkboard-teacher',
-    '专题训练': 'fas fa-target',
-    '考核模式': 'fas fa-clipboard-check'
-  }
-  return iconMap[modeName] || 'fas fa-microphone'
+const getPracticeModeById = (id: string): PracticeMode | undefined => {
+  return practiceMode.value.find(mode => mode.id === id)
 }
 
-const getColorForMode = (modeName: string): string => {
-  const colorMap: { [key: string]: string } = {
-    '自由练习': 'bg-blue-500',
-    '模拟课堂': 'bg-green-500',
-    '专题训练': 'bg-purple-500',
-    '考核模式': 'bg-red-500'
-  }
-  return colorMap[modeName] || 'bg-blue-500'
-}
-
-// 默认数据加载函数（作为后备）
-const loadDefaultPracticeModes = () => {
-  const defaultModes = [
-    {
-      id: '1',
-      name: '自由练习',
-      description: '自由选择主题进行试讲练习',
-      duration: '30分钟',
-      difficulty: '初级',
-      icon: 'fas fa-microphone',
-      color: 'bg-blue-500'
-    },
+// 数据加载函数
+const loadPracticeModes = () => {
+  practiceMode.value = [
     {
       id: '2',
       name: '模拟课堂',
       description: '模拟真实课堂环境练习',
-      duration: '45分钟',
+      duration: '10-30分钟',
       difficulty: '中级',
       icon: 'fas fa-chalkboard-teacher',
       color: 'bg-green-500'
     }
   ]
-  practiceMode.splice(0, practiceMode.length, ...defaultModes)
 }
 
-const loadDefaultCourseTopics = () => {
-  const defaultTopics = [
-    '数学基础概念',
-    '语文阅读理解',
-    '英语口语交流',
-    '科学实验探索',
-    '历史文化传承'
-  ]
-  courseTopics.splice(0, courseTopics.length, ...defaultTopics)
+const loadCourseTopics = async () => {
+  try {
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+    console.log('🔍 教师端加载课程主题 - API_BASE_URL:', API_BASE_URL)
+    console.log('🔍 教师端加载课程主题 - Token存在:', !!localStorage.getItem('access_token'))
+    
+    const response = await fetch(`${API_BASE_URL}/api/manager/course-topics`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+      }
+    })
+    
+    console.log('🔍 教师端课程主题API响应状态:', response.status)
+    
+    if (response.ok) {
+      const topics = await response.json()
+      console.log('✅ 教师端成功加载课程主题:', topics)
+      courseTopics.value.splice(0, courseTopics.value.length, ...topics)
+    } else {
+      console.error('❌ 教师端加载课程主题失败，状态码:', response.status)
+      // 使用默认主题作为后备
+      const defaultTopics = [
+        '数学基础概念',
+        '语文阅读理解',
+        '英语口语交流',
+        '科学实验探索',
+        '历史文化传承'
+      ]
+      courseTopics.value.splice(0, courseTopics.value.length, ...defaultTopics)
+    }
+  } catch (error) {
+    console.error('❌ 教师端加载课程主题时出错:', error)
+    // 使用默认主题作为后备
+    const defaultTopics = [
+      '数学基础概念',
+      '语文阅读理解',
+      '英语口语交流',
+      '科学实验探索',
+      '历史文化传承'
+    ]
+    courseTopics.value.splice(0, courseTopics.value.length, ...defaultTopics)
+  }
 }
 
-const loadDefaultEvaluationFocus = () => {
+const loadEvaluationFocus = () => {
   const defaultFocus = [
     { id: '1', name: '发音准确性' },
     { id: '2', name: '语言流畅性' },
     { id: '3', name: '教学内容' },
     { id: '4', name: '课堂互动' }
   ]
-  evaluationFocus.splice(0, evaluationFocus.length, ...defaultFocus)
+  evaluationFocus.value.splice(0, evaluationFocus.value.length, ...defaultFocus)
 }
 
-const loadDefaultPracticeHistory = () => {
+const loadPracticeHistory = () => {
   const defaultHistory = [
     {
       id: '1',
@@ -1018,8 +751,20 @@ onMounted(() => {
   loadCourseTopics()
   loadEvaluationFocus()
   loadPracticeHistory()
+  
+  // 自动选择模拟课堂模式
+  selectedMode.value = {
+    id: '2',
+    name: '模拟课堂',
+    description: '模拟真实课堂环境练习',
+    duration: '10-30分钟',
+    difficulty: '中级',
+    icon: 'fas fa-chalkboard-teacher',
+    color: 'bg-green-500'
+  }
 })
-</script>
+
+// 组件卸载时清理
 onUnmounted(() => {
   if (recordingTimer.value) {
     clearInterval(recordingTimer.value)

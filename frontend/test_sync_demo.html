@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>课程主题同步测试演示</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .panel {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .panel h2 {
+            margin-top: 0;
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        .admin-panel h2 {
+            border-bottom-color: #28a745;
+        }
+        .teacher-panel h2 {
+            border-bottom-color: #007bff;
+        }
+        .topic-list {
+            margin: 15px 0;
+            padding: 0;
+            list-style: none;
+        }
+        .topic-item {
+            background: #f8f9fa;
+            margin: 5px 0;
+            padding: 10px;
+            border-radius: 4px;
+            border-left: 4px solid #007bff;
+        }
+        .admin-panel .topic-item {
+            border-left-color: #28a745;
+        }
+        .controls {
+            margin: 15px 0;
+        }
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        .btn-success {
+            background: #28a745;
+        }
+        .btn-success:hover {
+            background: #1e7e34;
+        }
+        .btn-danger {
+            background: #dc3545;
+        }
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        .input-group {
+            display: flex;
+            margin: 10px 0;
+        }
+        .input-group input {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px 0 0 4px;
+        }
+        .input-group button {
+            border-radius: 0 4px 4px 0;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .instructions {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .instructions h1 {
+            color: #333;
+            margin-top: 0;
+        }
+        .step {
+            margin: 10px 0;
+            padding: 10px;
+            background: #f8f9fa;
+            border-left: 4px solid #007bff;
+            border-radius: 0 4px 4px 0;
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="instructions">
+        <h1>🔄 课程主题同步功能测试演示</h1>
+        <p>此页面演示管理员端课程主题管理与教师端试讲练习页面的实时同步功能。</p>
+        
+        <div class="step">
+            <strong>步骤 1:</strong> 点击下方"登录"按钮获取访问权限
+        </div>
+        <div class="step">
+            <strong>步骤 2:</strong> 在管理员端添加、修改或删除课程主题
+        </div>
+        <div class="step">
+            <strong>步骤 3:</strong> 点击"刷新教师端数据"查看同步效果
+        </div>
+        <div class="step">
+            <strong>步骤 4:</strong> 验证两端数据是否一致
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- 管理员端面板 -->
+        <div class="panel admin-panel">
+            <h2>🛠️ 管理员端 - 课程主题管理</h2>
+            
+            <div class="controls">
+                <button class="btn btn-success" onclick="login()">登录</button>
+                <button class="btn" onclick="loadAdminTopics()">刷新数据</button>
+            </div>
+
+            <div class="input-group">
+                <input type="text" id="newTopic" placeholder="输入新的课程主题..." onkeypress="handleEnter(event)">
+                <button class="btn btn-success" onclick="addTopic()">添加主题</button>
+            </div>
+
+            <div id="adminStatus" class="status info">请先登录以获取访问权限</div>
+
+            <h3>当前课程主题列表:</h3>
+            <ul id="adminTopics" class="topic-list">
+                <li class="topic-item">等待加载...</li>
+            </ul>
+
+            <div class="controls">
+                <button class="btn btn-success" onclick="saveTopics()">保存所有更改</button>
+                <button class="btn btn-danger" onclick="resetTopics()">重置为默认</button>
+            </div>
+
+            <div class="log" id="adminLog"></div>
+        </div>
+
+        <!-- 教师端面板 -->
+        <div class="panel teacher-panel">
+            <h2>👨‍🏫 教师端 - 试讲练习选择</h2>
+            
+            <div class="controls">
+                <button class="btn" onclick="loadTeacherTopics()">刷新教师端数据</button>
+            </div>
+
+            <div id="teacherStatus" class="status info">等待加载教师端数据</div>
+
+            <h3>请选择课程主题:</h3>
+            <select id="teacherTopicSelect" style="width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px;">
+                <option value="">请选择课程主题</option>
+            </select>
+
+            <ul id="teacherTopics" class="topic-list">
+                <li class="topic-item">等待加载...</li>
+            </ul>
+
+            <div class="log" id="teacherLog"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:8000';
+        let authToken = null;
+        let adminTopics = [];
+
+        function log(message, target = 'admin') {
+            const logElement = document.getElementById(target + 'Log');
+            const timestamp = new Date().toLocaleTimeString();
+            logElement.innerHTML += `[${timestamp}] ${message}\n`;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+
+        function setStatus(message, type = 'info', target = 'admin') {
+            const statusElement = document.getElementById(target + 'Status');
+            statusElement.className = `status ${type}`;
+            statusElement.textContent = message;
+        }
+
+        async function login() {
+            try {
+                log('🔐 正在登录...');
+                const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: 'zhangjing32@51talk.com',
+                        password: 'admin123456'
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    authToken = data.access_token;
+                    log('✅ 登录成功');
+                    setStatus('登录成功，可以进行课程主题管理', 'success');
+                    await loadAdminTopics();
+                } else {
+                    log('❌ 登录失败: ' + response.status);
+                    setStatus('登录失败，请检查账户信息', 'error');
+                }
+            } catch (error) {
+                log('❌ 登录错误: ' + error.message);
+                setStatus('登录错误: ' + error.message, 'error');
+            }
+        }
+
+        async function loadAdminTopics() {
+            if (!authToken) {
+                setStatus('请先登录', 'error');
+                return;
+            }
+
+            try {
+                log('📥 正在加载管理员端课程主题...');
+                const response = await fetch(`${API_BASE_URL}/api/manager/course-topics`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                if (response.ok) {
+                    adminTopics = await response.json();
+                    log(`✅ 成功加载 ${adminTopics.length} 个课程主题`);
+                    setStatus(`已加载 ${adminTopics.length} 个课程主题`, 'success');
+                    renderAdminTopics();
+                } else {
+                    log('❌ 加载失败: ' + response.status);
+                    setStatus('加载课程主题失败', 'error');
+                }
+            } catch (error) {
+                log('❌ 加载错误: ' + error.message);
+                setStatus('加载错误: ' + error.message, 'error');
+            }
+        }
+
+        async function loadTeacherTopics() {
+            try {
+                log('📥 正在加载教师端课程主题...', 'teacher');
+                // 模拟教师端的API调用（使用相同的API但不同的token获取方式）
+                const response = await fetch(`${API_BASE_URL}/api/manager/course-topics`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken || localStorage.getItem('access_token')}`
+                    }
+                });
+
+                if (response.ok) {
+                    const teacherTopics = await response.json();
+                    log(`✅ 教师端成功加载 ${teacherTopics.length} 个课程主题`, 'teacher');
+                    setStatus(`教师端已加载 ${teacherTopics.length} 个课程主题`, 'success', 'teacher');
+                    renderTeacherTopics(teacherTopics);
+                } else {
+                    log('❌ 教师端加载失败: ' + response.status, 'teacher');
+                    setStatus('教师端加载课程主题失败', 'error', 'teacher');
+                }
+            } catch (error) {
+                log('❌ 教师端加载错误: ' + error.message, 'teacher');
+                setStatus('教师端加载错误: ' + error.message, 'error', 'teacher');
+            }
+        }
+
+        function renderAdminTopics() {
+            const topicsList = document.getElementById('adminTopics');
+            topicsList.innerHTML = '';
+            
+            adminTopics.forEach((topic, index) => {
+                const li = document.createElement('li');
+                li.className = 'topic-item';
+                li.innerHTML = `
+                    <span>${topic}</span>
+                    <button class="btn btn-danger" style="float: right; padding: 5px 10px; font-size: 12px;" onclick="deleteTopic(${index})">删除</button>
+                `;
+                topicsList.appendChild(li);
+            });
+        }
+
+        function renderTeacherTopics(topics) {
+            const topicsList = document.getElementById('teacherTopics');
+            const topicsSelect = document.getElementById('teacherTopicSelect');
+            
+            // 更新列表
+            topicsList.innerHTML = '';
+            topics.forEach(topic => {
+                const li = document.createElement('li');
+                li.className = 'topic-item';
+                li.textContent = topic;
+                topicsList.appendChild(li);
+            });
+
+            // 更新下拉选择
+            topicsSelect.innerHTML = '<option value="">请选择课程主题</option>';
+            topics.forEach(topic => {
+                const option = document.createElement('option');
+                option.value = topic;
+                option.textContent = topic;
+                topicsSelect.appendChild(option);
+            });
+        }
+
+        function addTopic() {
+            const input = document.getElementById('newTopic');
+            const topic = input.value.trim();
+            
+            if (topic && !adminTopics.includes(topic)) {
+                adminTopics.push(topic);
+                input.value = '';
+                log(`➕ 添加主题: ${topic}`);
+                renderAdminTopics();
+                setStatus(`已添加主题: ${topic}`, 'success');
+            } else if (adminTopics.includes(topic)) {
+                setStatus('主题已存在', 'error');
+            } else {
+                setStatus('请输入有效的主题名称', 'error');
+            }
+        }
+
+        function deleteTopic(index) {
+            const topic = adminTopics[index];
+            if (confirm(`确定要删除主题"${topic}"吗？`)) {
+                adminTopics.splice(index, 1);
+                log(`🗑️ 删除主题: ${topic}`);
+                renderAdminTopics();
+                setStatus(`已删除主题: ${topic}`, 'success');
+            }
+        }
+
+        async function saveTopics() {
+            if (!authToken) {
+                setStatus('请先登录', 'error');
+                return;
+            }
+
+            try {
+                log('💾 正在保存课程主题到服务器...');
+                const response = await fetch(`${API_BASE_URL}/api/manager/course-topics/batch`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({ topics: adminTopics })
+                });
+
+                if (response.ok) {
+                    log('✅ 课程主题保存成功');
+                    setStatus('课程主题已保存到服务器', 'success');
+                    // 自动刷新教师端数据以验证同步
+                    setTimeout(() => {
+                        loadTeacherTopics();
+                    }, 1000);
+                } else {
+                    log('❌ 保存失败: ' + response.status);
+                    setStatus('保存失败，请重试', 'error');
+                }
+            } catch (error) {
+                log('❌ 保存错误: ' + error.message);
+                setStatus('保存错误: ' + error.message, 'error');
+            }
+        }
+
+        function resetTopics() {
+            if (confirm('确定要重置为默认课程主题吗？')) {
+                adminTopics = [
+                    '数学基础概念',
+                    '语文阅读理解',
+                    '英语口语交流',
+                    '科学实验探索',
+                    '历史文化传承'
+                ];
+                log('🔄 重置为默认主题');
+                renderAdminTopics();
+                setStatus('已重置为默认主题', 'info');
+            }
+        }
+
+        function handleEnter(event) {
+            if (event.key === 'Enter') {
+                addTopic();
+            }
+        }
+
+        // 页面加载时的初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            log('📄 页面加载完成，请先登录');
+            log('🔗 API地址: ' + API_BASE_URL);
+            
+            log('📄 教师端页面初始化', 'teacher');
+            log('🔗 等待管理员端数据同步', 'teacher');
+        });
+    </script>
+</body>
+</html>

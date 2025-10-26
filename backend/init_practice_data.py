@@ -71,46 +71,11 @@ def init_practice_data():
         else:
             # 插入课程主题数据
             course_topics = [
-                CourseTopic(
-                    name="数学基础概念",
-                    description="小学数学基础概念教学",
-                    subject="数学",
-                    grade_level="小学",
-                    keywords='["加减法", "乘除法", "基础概念"]',
-                    order_index=1
-                ),
-                CourseTopic(
-                    name="语文阅读理解",
-                    description="语文阅读理解技巧教学",
-                    subject="语文",
-                    grade_level="小学",
-                    keywords='["阅读", "理解", "技巧"]',
-                    order_index=2
-                ),
-                CourseTopic(
-                    name="英语口语交流",
-                    description="英语日常口语交流教学",
-                    subject="英语",
-                    grade_level="小学",
-                    keywords='["口语", "交流", "日常用语"]',
-                    order_index=3
-                ),
-                CourseTopic(
-                    name="科学实验探索",
-                    description="科学实验方法和探索精神培养",
-                    subject="科学",
-                    grade_level="小学",
-                    keywords='["实验", "探索", "科学方法"]',
-                    order_index=4
-                ),
-                CourseTopic(
-                    name="历史文化传承",
-                    description="中国历史文化知识传授",
-                    subject="历史",
-                    grade_level="小学",
-                    keywords='["历史", "文化", "传承"]',
-                    order_index=5
-                )
+                CourseTopic(name="数学基础概念"),
+                CourseTopic(name="语文阅读理解"),
+                CourseTopic(name="英语口语交流"),
+                CourseTopic(name="科学实验探索"),
+                CourseTopic(name="历史文化传承")
             ]
             
             for topic in course_topics:

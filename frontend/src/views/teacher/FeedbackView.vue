@@ -407,7 +407,7 @@ const generateNewReport = async () => {
        const newReport: FeedbackReport = {
          id: Date.now(),
          title: `AI智能反馈报告 - ${new Date().toLocaleDateString()}`,
-         subject: '语文' as const,
+         subject: '语文',
          date: new Date().toISOString().split('T')[0],
          duration: 30,
          overallScore: result.feedback?.overall_score || 80,
@@ -421,7 +421,7 @@ const generateNewReport = async () => {
             {
               id: 1,
               type: 'positive' as const,
-              text: (result.feedback?.summary as string) || '基于AI分析生成的综合反馈报告'
+              text: result.feedback?.summary || '基于AI分析生成的综合反馈报告'
             }
           ]
        }
@@ -441,7 +441,7 @@ const generateNewReport = async () => {
      const mockReport: FeedbackReport = {
        id: Date.now(),
        title: `AI智能反馈报告 - ${new Date().toLocaleDateString()}`,
-       subject: '语文' as const,
+       subject: '语文',
        date: new Date().toISOString().split('T')[0],
        duration: 30,
        overallScore: 82,
@@ -485,7 +485,7 @@ const useOfflineMode = () => {
   const mockReport: FeedbackReport = {
      id: Date.now(),
      title: `离线反馈报告 - ${new Date().toLocaleDateString()}`,
-     subject: '语文' as const,
+     subject: '语文',
      date: new Date().toISOString().split('T')[0],
     duration: 30,
     overallScore: 80,

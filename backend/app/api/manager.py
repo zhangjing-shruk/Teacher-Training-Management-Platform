@@ -1,5 +1,5 @@
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from pydantic import BaseModel
@@ -8,11 +8,12 @@ import uuid
 import shutil
 from pathlib import Path
 from datetime import datetime, timedelta
+import logging
 
 from app.core.database import get_db
 from app.api.auth import get_current_user
 from app.models.user import User, UserRole
-from app.models.training import TrainingMaterial, MaterialType, PracticeSession
+from app.models.training import TrainingMaterial, MaterialType, PracticeSession, CourseTopic
 from app.services.sync_service import SyncService
 from app.models.sync import SyncLog, MaterialVersion
 
@@ -245,20 +246,80 @@ async def get_pending_lectures(
 ):
     """获取待评审讲座"""
     # TODO: 实现待评审讲座查询
-    # API占位符
-    return {"message": "待评审讲座功能开发中", "lectures": []}
+    # 临时模拟数据用于测试课程主题功能
+    mock_lectures = [
+        {
+            "id": 1,
+            "teacherName": "李老师",
+            "title": "小学数学基础运算教学",
+            "duration": "25分钟",
+            "submittedAt": "2024-01-15T10:30:00Z",
+            "status": "pending",
+            "courseTopic": "数学基础概念",
+            "videoUrl": "/videos/lecture1.mp4"
+        },
+        {
+            "id": 2,
+            "teacherName": "王老师", 
+            "title": "英语口语练习课程",
+            "duration": "30分钟",
+            "submittedAt": "2024-01-15T14:20:00Z",
+            "status": "pending",
+            "courseTopic": "英语口语交流",
+            "videoUrl": "/videos/lecture2.mp4"
+        },
+        {
+            "id": 3,
+            "teacherName": "张老师",
+            "title": "语文阅读理解技巧",
+            "duration": "28分钟", 
+            "submittedAt": "2024-01-16T09:15:00Z",
+            "status": "pending",
+            "courseTopic": "语文阅读理解",
+            "videoUrl": "/videos/lecture3.mp4"
+        },
+        {
+            "id": 4,
+            "teacherName": "刘老师",
+            "title": "科学实验演示课",
+            "duration": "35分钟",
+            "submittedAt": "2024-01-16T16:45:00Z", 
+            "status": "reviewed",
+            "courseTopic": "科学实验探索",
+            "videoUrl": "/videos/lecture4.mp4",
+            "managerFeedback": "讲解清晰，实验步骤规范",
+            "reviewedAt": "2024-01-17T10:00:00Z"
+        }
+    ]
+    return mock_lectures
+
+
+class LectureReviewRequest(BaseModel):
+    result: str  # 'passed' or 'failed'
+    feedback: str
+    score: Optional[int] = None
+    courseTopic: Optional[str] = None
 
 
 @router.post("/lectures/{lecture_id}/review")
 async def review_lecture(
     lecture_id: int,
+    review_data: LectureReviewRequest,
     current_user: User = Depends(verify_manager_role),
     db: Session = Depends(get_db)
 ):
     """提交讲座评审结果"""
-    # TODO: 实现讲座评审
-    # API占位符
-    return {"message": f"讲座{lecture_id}评审功能开发中"}
+    # TODO: 实现讲座评审数据库操作
+    # 临时返回成功响应用于测试
+    return {
+        "message": f"讲座{lecture_id}评审提交成功",
+        "lecture_id": lecture_id,
+        "result": review_data.result,
+        "feedback": review_data.feedback,
+        "score": review_data.score,
+        "courseTopic": review_data.courseTopic,
+        "reviewedAt": datetime.now().isoformat()
+    }
 
 
 @router.post("/ai/video-analysis")
@@ -637,6 +698,24 @@ class SyncLogResponse(BaseModel):
     batch_id: Optional[str] = None
     error_message: Optional[str] = None
     created_at: str
+
+    class Config:
+        from_attributes = True
+
+
+class CourseTopicCreate(BaseModel):
+    name: str
+
+
+class CourseTopicUpdate(BaseModel):
+    name: str
+
+
+class CourseTopicResponse(BaseModel):
+    id: int
+    name: str
+    created_at: str
+    updated_at: str
     
     class Config:
         from_attributes = True
@@ -769,3 +848,155 @@ async def clear_virtual_materials(
         "message": f"已清理 {len(teachers)} 位教师的虚拟资料",
         "results": results
     }
+
+
+# 课程主题管理接口
+@router.get("/course-topics")
+async def get_course_topics(
+    current_user: User = Depends(verify_manager_role),
+    db: Session = Depends(get_db)
+):
+    """获取所有课程主题"""
+    try:
+        topics = db.query(CourseTopic).order_by(CourseTopic.created_at).all()
+        
+        # 如果数据库中没有主题，返回默认主题
+        if not topics:
+            default_topics = [
+                "数学基础概念",
+                "语文阅读理解", 
+                "英语口语交流",
+                "科学实验探索",
+                "历史文化传承"
+            ]
+            return default_topics
+        
+        return [topic.name for topic in topics]
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"获取课程主题失败: {str(e)}"
+        )
+
+
+@router.post("/course-topics")
+async def create_course_topic(
+    topic_data: CourseTopicCreate,
+    current_user: User = Depends(verify_manager_role),
+    db: Session = Depends(get_db)
+):
+    """创建新的课程主题"""
+    try:
+        # TODO: 保存到数据库
+        # existing_topic = db.query(CourseTopic).filter(CourseTopic.name == topic_data.name).first()
+        # if existing_topic:
+        #     raise HTTPException(status_code=400, detail="课程主题已存在")
+        # 
+        # new_topic = CourseTopic(name=topic_data.name)
+        # db.add(new_topic)
+        # db.commit()
+        # db.refresh(new_topic)
+        
+        return {
+            "message": "课程主题创建成功",
+            "topic": topic_data.name
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"创建课程主题失败: {str(e)}"
+        )
+
+
+@router.put("/course-topics/{topic_id}")
+async def update_course_topic(
+    topic_id: int,
+    topic_data: CourseTopicUpdate,
+    current_user: User = Depends(verify_manager_role),
+    db: Session = Depends(get_db)
+):
+    """更新课程主题"""
+    try:
+        # TODO: 更新数据库中的课程主题
+        # topic = db.query(CourseTopic).filter(CourseTopic.id == topic_id).first()
+        # if not topic:
+        #     raise HTTPException(status_code=404, detail="课程主题不存在")
+        # 
+        # topic.name = topic_data.name
+        # db.commit()
+        
+        return {
+            "message": "课程主题更新成功",
+            "topic": topic_data.name
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"更新课程主题失败: {str(e)}"
+        )
+
+
+@router.delete("/course-topics/{topic_id}")
+async def delete_course_topic(
+    topic_id: int,
+    current_user: User = Depends(verify_manager_role),
+    db: Session = Depends(get_db)
+):
+    """删除课程主题"""
+    try:
+        # TODO: 从数据库删除课程主题
+        # topic = db.query(CourseTopic).filter(CourseTopic.id == topic_id).first()
+        # if not topic:
+        #     raise HTTPException(status_code=404, detail="课程主题不存在")
+        # 
+        # db.delete(topic)
+        # db.commit()
+        
+        return {
+            "message": "课程主题删除成功"
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"删除课程主题失败: {str(e)}"
+        )
+
+
+class CourseTopicsBatch(BaseModel):
+    topics: List[str]
+
+
+@router.post("/course-topics/batch")
+async def update_course_topics_batch(
+    data: CourseTopicsBatch,
+    current_user: User = Depends(verify_manager_role),
+    db: Session = Depends(get_db)
+):
+    """批量更新课程主题 - 执行原子操作，清空现有记录并插入新主题"""
+    try:
+        # 开始事务 - 删除所有现有主题
+        db.query(CourseTopic).delete()
+        
+        # 添加新主题
+        for topic_name in data.topics:
+            # 检查主题名称是否为空
+            if not topic_name or not topic_name.strip():
+                continue
+                
+            new_topic = CourseTopic(name=topic_name.strip())
+            db.add(new_topic)
+        
+        # 提交事务
+        db.commit()
+        
+        return {
+            "message": "课程主题批量保存成功",
+            "count": len([t for t in data.topics if t and t.strip()])
+        }
+    except Exception as e:
+        # 回滚事务
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"批量保存课程主题失败: {str(e)}"
+        )

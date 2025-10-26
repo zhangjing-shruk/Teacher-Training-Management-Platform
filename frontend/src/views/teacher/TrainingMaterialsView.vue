@@ -264,7 +264,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useSupabaseAuthStore } from '@/stores/supabaseAuth'
+import { useLocalAuthStore } from '@/stores/localAuth'
+import { LearningProgressService } from '@/services/supabaseService'
+import { TrainingMaterialService } from '@/services/supabaseService'
 
 interface TrainingMaterial {
   id: number
@@ -285,6 +289,10 @@ interface TrainingMaterial {
   total_study_seconds?: number
 }
 
+// 使用认证store
+const authStore = useSupabaseAuthStore()
+const localAuthStore = useLocalAuthStore()
+
 // 筛选条件
 const selectedCategory = ref('')
 const selectedStatus = ref('')
@@ -295,10 +303,14 @@ const materials = ref<TrainingMaterial[]>([])
 const loading = ref(false)
 const error = ref('')
 
+// 学习计时器相关
+const learningTimers = ref<Record<string, number>>({})
+const currentLearningMaterial = ref<string | null>(null)
+
 // 简介展开状态
 const expandedDescriptions = ref<Record<number, boolean>>({})
 
-// 从 Supabase 获取培训资料
+// 获取培训资料
 const fetchMaterials = async () => {
   try {
     loading.value = true
@@ -308,18 +320,25 @@ const fetchMaterials = async () => {
     const { TrainingMaterialService } = await import('@/services/supabaseService')
     const data = await TrainingMaterialService.getAll()
 
-    // 获取当前用户的学习进度
+    // 根据认证模式获取学习进度
     let progressData: any[] = []
-    try {
-      const { useSupabaseAuthStore } = await import('@/stores/supabaseAuth')
-      const authStore = useSupabaseAuthStore()
-      
-      if (authStore.user) {
-        const { LearningProgressService } = await import('@/services/supabaseService')
-        progressData = await LearningProgressService.getUserProgress(authStore.user.id)
+    
+    if (import.meta.env.VITE_LOCAL_DEV_MODE === 'true') {
+      // 本地模式：使用本地存储的进度
+      progressData = localAuthStore.getUserLearningProgress()
+    } else {
+      // Supabase模式：从服务器获取进度
+      try {
+        const { useSupabaseAuthStore } = await import('@/stores/supabaseAuth')
+        const authStore = useSupabaseAuthStore()
+        
+        if (authStore.user) {
+          const { LearningProgressService } = await import('@/services/supabaseService')
+          progressData = await LearningProgressService.getUserProgress(authStore.user.id)
+        }
+      } catch (progressErr) {
+        console.warn('获取学习进度失败:', progressErr)
       }
-    } catch (progressErr) {
-      console.warn('获取学习进度失败:', progressErr)
     }
 
     // 转换数据格式以匹配 TrainingMaterial 接口
@@ -331,11 +350,12 @@ const fetchMaterials = async () => {
       let progressPercentage = 0
       
       if (progress) {
-        progressPercentage = progress.progress_percentage || 0
         if (progress.is_completed) {
           status = 'completed'
+          progressPercentage = 100
         } else if (progress.total_study_seconds > 0) {
           status = 'in_progress'
+          progressPercentage = Math.round(progress.progress_percentage || 0)
         }
       }
 
@@ -378,6 +398,14 @@ const getCategoryFromType = (type: string) => {
 // 组件挂载时获取数据
 onMounted(() => {
   fetchMaterials()
+})
+
+// 组件卸载时清理计时器
+onUnmounted(() => {
+  Object.values(learningTimers.value).forEach(timer => {
+    clearInterval(timer)
+  })
+  learningTimers.value = {}
 })
 
 // 计算属性
@@ -459,8 +487,29 @@ const toggleDescription = (materialId: number) => {
 // 操作函数
 const startLearning = async (material: TrainingMaterial) => {
   try {
-    // 更新学习状态
-    material.status = 'in_progress'
+    // 停止之前的学习计时器
+    if (currentLearningMaterial.value && learningTimers.value[currentLearningMaterial.value]) {
+      clearInterval(learningTimers.value[currentLearningMaterial.value])
+      delete learningTimers.value[currentLearningMaterial.value]
+    }
+    
+    // 更新材料状态为进行中
+     const materialIndex = materials.value.findIndex(m => m.id === material.id)
+     if (materialIndex !== -1 && materials.value[materialIndex]) {
+       materials.value[materialIndex].status = 'in_progress'
+     }
+    
+    // 记录学习开始
+     await recordLearningStart(material.id?.toString() || '', material.title)
+     
+     // 设置当前学习材料
+     currentLearningMaterial.value = material.id?.toString() || ''
+     
+     // 启动学习计时器（每10秒更新一次进度）
+     const materialIdStr = material.id?.toString() || ''
+     learningTimers.value[materialIdStr] = setInterval(() => {
+       updateLearningProgress(materialIdStr, 10) // 每次增加10秒
+     }, 10000)
     
     // 构建文件URL
     const fileUrl = material.file_url || material.file_path
@@ -472,13 +521,6 @@ const startLearning = async (material: TrainingMaterial) => {
     // 打开文件
     window.open(fileUrl, '_blank')
     
-    // TODO: 实现真实的学习进度跟踪
-    // 应该通过API记录学习开始时间和进度
-    console.log('开始学习:', material.title, '文件URL:', fileUrl)
-    
-    // 记录学习开始
-    await recordLearningStart(material.id.toString())
-    
   } catch (err) {
     console.error('开始学习失败:', err)
     alert('开始学习失败，请重试')
@@ -486,16 +528,73 @@ const startLearning = async (material: TrainingMaterial) => {
 }
 
 // 记录学习开始
-const recordLearningStart = async (materialId: string) => {
-  try {
-    // TODO: 调用API记录学习开始
-    // const response = await fetch('/api/teacher/learning/start', {
-    //   method: 'POST',
-    //   body: JSON.stringify({ materialId })
-    // })
-    console.log('记录学习开始:', materialId)
-  } catch (error) {
-    console.error('记录学习开始失败:', error)
+const recordLearningStart = async (materialId: string, materialTitle: string) => {
+  if (import.meta.env.VITE_LOCAL_DEV_MODE === 'true') {
+    // 本地模式：使用本地存储
+    localAuthStore.startLearning(materialId, materialTitle)
+  } else {
+     // Supabase模式：调用API
+     try {
+       const { LearningProgressService } = await import('@/services/supabaseService')
+       if (authStore.user?.id) {
+         await LearningProgressService.startLearning(authStore.user.id, materialId)
+       }
+     } catch (error) {
+       console.error('记录学习开始失败:', error)
+     }
+   }
+}
+
+// 更新学习进度
+const updateLearningProgress = async (materialId: string, studySeconds: number) => {
+  if (import.meta.env.VITE_LOCAL_DEV_MODE === 'true') {
+    // 本地模式：使用本地存储
+    const updatedProgress = localAuthStore.updateLearningProgress(materialId, studySeconds)
+    
+    if (updatedProgress) {
+       // 更新UI中的进度
+       const materialIndex = materials.value.findIndex(m => m.id?.toString() === materialId)
+       if (materialIndex !== -1 && materials.value[materialIndex]) {
+         materials.value[materialIndex].progress = updatedProgress.progress_percentage
+         materials.value[materialIndex].total_study_seconds = updatedProgress.total_study_seconds
+         
+         if (updatedProgress.is_completed) {
+           materials.value[materialIndex].status = 'completed'
+           // 停止计时器
+           if (learningTimers.value[materialId]) {
+             clearInterval(learningTimers.value[materialId])
+             delete learningTimers.value[materialId]
+           }
+         }
+       }
+     }
+  } else {
+     // Supabase模式：调用API
+     try {
+       const { LearningProgressService } = await import('@/services/supabaseService')
+       if (authStore.user?.id) {
+         // 计算进度百分比（假设10分钟完成100%）
+         const targetMinutes = 10
+         const progressPercentage = Math.min(100, (studySeconds / (targetMinutes * 60)) * 100)
+         await LearningProgressService.updateProgress(authStore.user.id, materialId, Math.round(progressPercentage))
+         // 重新获取材料以更新进度
+         await fetchMaterials()
+       }
+     } catch (error) {
+       console.error('更新学习进度失败:', error)
+     }
+   }
+}
+
+// 停止学习
+const stopLearning = (materialId: string) => {
+  if (learningTimers.value[materialId]) {
+    clearInterval(learningTimers.value[materialId])
+    delete learningTimers.value[materialId]
+  }
+  
+  if (currentLearningMaterial.value === materialId) {
+    currentLearningMaterial.value = null
   }
 }
 </script>

@@ -118,13 +118,7 @@ class CourseTopic(Base):
     __tablename__ = "course_topics"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, nullable=False)  # 课程主题名称
-    description = Column(Text)  # 主题描述
-    subject = Column(String)  # 学科分类
-    grade_level = Column(String)  # 年级水平
-    keywords = Column(Text)  # 关键词，JSON格式存储
-    is_active = Column(Boolean, default=True)  # 是否启用
-    order_index = Column(Integer, default=0)  # 排序索引
+    name = Column(String, nullable=False, unique=True)  # 课程主题名称，要求唯一
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
