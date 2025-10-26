@@ -418,7 +418,8 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { runSupabaseTest } from '@/utils/supabaseTest'
+import { testSupabaseConnection, testBucketCreation } from '@/utils/supabaseTest'
+import SupabaseStorageService from '@/services/supabaseStorageService'
 
 interface Material {
   id: string  // 改为 string 类型以支持 UUID
@@ -540,44 +541,82 @@ const formatDate = (dateString: string) => {
 }
 
 const previewMaterial = (material: Material) => {
+  console.log('🔍 预览材料:', material)
+  
   if (!material.fileUrl) {
+    console.error('❌ 文件URL不存在')
     alert('文件不存在，无法预览')
     return
   }
   
-  // 构建完整的文件URL
-  const fileUrl = `http://localhost:8000${material.fileUrl}`
+  let fileUrl = material.fileUrl
+  
+  // 检查是否是旧的相对路径格式，如果是则尝试从 Supabase Storage 获取
+  if (fileUrl.startsWith('/uploads/') || fileUrl.startsWith('uploads/')) {
+    console.log('🔄 检测到旧格式URL，尝试从Supabase Storage获取:', fileUrl)
+    const migratedUrl = SupabaseStorageService.migrateFromOldUrl(fileUrl)
+    if (migratedUrl) {
+      fileUrl = migratedUrl
+      console.log('✅ 成功迁移到Supabase Storage URL:', fileUrl)
+    } else {
+      // 如果迁移失败，尝试使用API基础URL
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+      fileUrl = `${API_BASE_URL}${material.fileUrl}`
+      console.log('⚠️ 迁移失败，使用API基础URL:', fileUrl)
+    }
+  } else if (!fileUrl.startsWith('http')) {
+    // 如果不是完整URL，使用API基础URL
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+    fileUrl = `${API_BASE_URL}${material.fileUrl}`
+    console.log('🌐 使用API基础URL构建完整URL:', fileUrl)
+  }
+  
+  console.log('📁 最终文件URL:', fileUrl)
   
   // 根据文件类型决定预览方式
   const fileExtension = material.fileUrl.split('.').pop()?.toLowerCase()
+  console.log('📄 文件扩展名:', fileExtension)
   
   if (fileExtension === 'pdf') {
     // PDF文件在新窗口中打开
+    console.log('📄 打开PDF文件')
     window.open(fileUrl, '_blank')
   } else if (['jpg', 'jpeg', 'png', 'gif', 'svg'].includes(fileExtension || '')) {
     // 图片文件在新窗口中打开
+    console.log('🖼️ 打开图片文件')
     window.open(fileUrl, '_blank')
   } else if (['mp4', 'avi', 'mov', 'wmv'].includes(fileExtension || '')) {
     // 视频文件在新窗口中打开
+    console.log('🎥 打开视频文件')
     window.open(fileUrl, '_blank')
   } else if (['mp3', 'wav', 'ogg'].includes(fileExtension || '')) {
     // 音频文件在新窗口中打开
+    console.log('🎵 打开音频文件')
     window.open(fileUrl, '_blank')
   } else {
     // 其他文件类型直接下载
+    console.log('⬇️ 其他文件类型，执行下载')
     downloadMaterial(material)
   }
 }
 
 const downloadMaterial = async (material: Material) => {
+  console.log('⬇️ 下载材料:', material)
+  
   if (!material.fileUrl) {
+    console.error('❌ 文件URL不存在')
     alert('文件不存在，无法下载')
     return
   }
   
   try {
+    // 获取API基础URL
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+    console.log('🌐 使用API基础URL:', API_BASE_URL)
+    
     // 构建完整的文件URL
-    const fileUrl = `http://localhost:8000${material.fileUrl}`
+    const fileUrl = `${API_BASE_URL}${material.fileUrl}`
+    console.log('📁 完整文件URL:', fileUrl)
     
     // 创建一个临时的a标签来触发下载
     const link = document.createElement('a')
@@ -695,19 +734,39 @@ const submitMaterial = async () => {
       uploadProgress.value = 0
       uploadError.value = ''
 
+      // 首先确保 Supabase Storage bucket 存在
+      console.log('检查 Supabase Storage bucket...')
+      const bucketReady = await SupabaseStorageService.ensureBucketExists()
+      if (!bucketReady) {
+        throw new Error('Supabase Storage bucket 不可用')
+      }
+
+      // 上传文件到 Supabase Storage
+      console.log('开始上传文件到 Supabase Storage...')
+      uploadProgress.value = 10
+      
+      const uploadResult = await SupabaseStorageService.uploadFile(selectedFile.value, 'materials')
+      
+      if (!uploadResult.success) {
+        throw new Error(uploadResult.error || '文件上传失败')
+      }
+      
+      console.log('✅ 文件上传成功:', uploadResult)
+      uploadProgress.value = 50
+
       // 检查Supabase服务可用性
       console.log('检查Supabase服务可用性...')
       const { TrainingMaterialService } = await import('@/services/supabaseService')
       console.log('TrainingMaterialService 导入成功')
       
-      // 准备资料数据
+      // 准备资料数据，使用 Supabase Storage URL
       const mappedType = materialForm.value.type === 'presentation' ? 'document' : materialForm.value.type
         
       const materialData = {
         title: materialForm.value.title.trim(),
         description: materialForm.value.description?.trim() || '',
         material_type: mappedType as 'document' | 'video' | 'interactive',
-        content_url: `uploads/${selectedFile.value.name}`,
+        content_url: uploadResult.url || uploadResult.path || '',
         duration_minutes: parseInt(materialForm.value.duration as string) || 0,
         created_by: 'manager'
       }
@@ -715,8 +774,10 @@ const submitMaterial = async () => {
       console.log('准备创建资料，数据:', JSON.stringify(materialData, null, 2))
       console.log('开始调用 TrainingMaterialService.create...')
       
+      uploadProgress.value = 75
       const newMaterial = await TrainingMaterialService.create(materialData)
       console.log('✅ 资料创建成功:', JSON.stringify(newMaterial, null, 2))
+      uploadProgress.value = 100
       
       // 转换为前端格式
        const materialToAdd: Material = {
@@ -916,10 +977,13 @@ const loadMaterials = async () => {
 }
 
 // 页面挂载时加载数据
-onMounted(() => {
+onMounted(async () => {
   // 在开发和生产环境中运行 Supabase 连接测试
   console.log('🔍 MaterialsView 组件已挂载，开始 Supabase 连接测试...')
-  runSupabaseTest()
+  const connectionResult = await testSupabaseConnection()
+  if (connectionResult) {
+    await testBucketCreation()
+  }
   
   loadMaterials()
 })
