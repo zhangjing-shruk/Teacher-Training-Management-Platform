@@ -5,6 +5,7 @@
   "framework": "vite",
   "ignoreCommand": "npx vercel-ignore",
   "functions": {},
+  "_comment": "Updated for file preview functionality fix",
   "rewrites": [
     {
       "source": "/(.*)",
