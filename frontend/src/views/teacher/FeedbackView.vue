@@ -249,8 +249,10 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useSupabaseAuthStore } from '@/stores/supabaseAuth'
 
 const router = useRouter()
+const authStore = useSupabaseAuthStore()
 
 interface FeedbackReport {
   id: number
@@ -371,7 +373,7 @@ const generateNewReport = async () => {
     isGenerating.value = true
     generateError.value = ''
     
-    const token = localStorage.getItem('token')
+    const token = authStore.session?.access_token
     if (!token) {
       generateError.value = '请先登录后再生成报告'
       return

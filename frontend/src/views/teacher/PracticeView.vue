@@ -355,8 +355,10 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useSupabaseAuthStore } from '@/stores/supabaseAuth'
 
 const router = useRouter()
+const authStore = useSupabaseAuthStore()
 
 // 接口定义
 interface PracticeMode {
@@ -470,7 +472,12 @@ const practiceHistory = ref<PracticeRecord[]>([])
 // 加载练习模式数据
 const loadPracticeModes = async () => {
   try {
-    const token = localStorage.getItem('token')
+    const token = authStore.session?.access_token
+    if (!token) {
+      console.warn('未找到认证令牌')
+      loadDefaultPracticeModes()
+      return
+    }
     const response = await fetch('/api/teacher/practice-modes', {
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -508,7 +515,12 @@ const loadPracticeModes = async () => {
 // 加载课程主题数据
 const loadCourseTopics = async () => {
   try {
-    const token = localStorage.getItem('token')
+    const token = authStore.session?.access_token
+    if (!token) {
+      console.warn('未找到认证令牌')
+      loadDefaultCourseTopics()
+      return
+    }
     const response = await fetch('/api/teacher/course-topics', {
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -535,7 +547,12 @@ const loadCourseTopics = async () => {
 // 加载评估重点数据
 const loadEvaluationFocus = async () => {
   try {
-    const token = localStorage.getItem('token')
+    const token = authStore.session?.access_token
+    if (!token) {
+      console.warn('未找到认证令牌')
+      loadDefaultEvaluationFocus()
+      return
+    }
     const response = await fetch('/api/teacher/evaluation-focus', {
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -565,7 +582,12 @@ const loadEvaluationFocus = async () => {
 // 加载练习历史数据
 const loadPracticeHistory = async () => {
   try {
-    const token = localStorage.getItem('token')
+    const token = authStore.session?.access_token
+    if (!token) {
+      console.warn('未找到认证令牌')
+      loadDefaultPracticeHistory()
+      return
+    }
     const response = await fetch('/api/teacher/practice-history', {
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -663,7 +685,7 @@ const generatePracticeResult = async () => {
     console.log('开始AI分析...')
     
     // 获取认证token
-    const token = localStorage.getItem('token')
+    const token = authStore.session?.access_token
     if (!token) {
       throw new Error('请先登录后再进行分析')
     }
