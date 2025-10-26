@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { supabase, isSupabaseConfigured, type User, USER_ROLES } from '@/lib/supabase'
 import type { AuthError, Session } from '@supabase/supabase-js'
+import { parseError, showUserFriendlyError, logError, isNetworkError } from '@/utils/errorHandler'
 
 export interface LoginCredentials {
   email: string
@@ -31,7 +32,7 @@ export const useSupabaseAuthStore = defineStore('supabaseAuth', () => {
   const isManager = computed(() => user.value?.role === USER_ROLES.MANAGER)
 
   // 初始化认证状态
-  const initializeAuth = async () => {
+  const initializeAuth = async (retryCount = 0) => {
     try {
       loading.value = true
       error.value = null
@@ -43,10 +44,10 @@ export const useSupabaseAuthStore = defineStore('supabaseAuth', () => {
         return Promise.resolve()
       }
       
-      // 获取当前会话（添加超时保护）
+      // 获取当前会话（添加超时保护和重试机制）
       const sessionPromise = supabase.auth.getSession()
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Session fetch timeout')), 3000)
+        setTimeout(() => reject(new Error('Session fetch timeout')), 10000)
       )
       
       const { data: { session: currentSession } } = await Promise.race([
@@ -79,8 +80,19 @@ export const useSupabaseAuthStore = defineStore('supabaseAuth', () => {
         }
       })
     } catch (err: any) {
-      console.error('Auth initialization error:', err)
-      error.value = err.message
+      logError(err, 'Auth initialization')
+      const userFriendlyMessage = showUserFriendlyError(err)
+      error.value = userFriendlyMessage
+      
+      // 如果是网络错误且重试次数少于2次，则重试
+      if (isNetworkError(err) && retryCount < 2) {
+        console.log(`认证初始化重试 ${retryCount + 1}/2`)
+        setTimeout(() => {
+          initializeAuth(retryCount + 1)
+        }, 2000) // 2秒后重试
+        return
+      }
+      
       // 不要抛出错误，让应用继续运行
     } finally {
       loading.value = false
@@ -165,7 +177,9 @@ export const useSupabaseAuthStore = defineStore('supabaseAuth', () => {
 
       return authData
     } catch (err: any) {
-      error.value = err.message || '注册失败'
+      logError(err, 'User registration')
+      const userFriendlyMessage = showUserFriendlyError(err)
+      error.value = userFriendlyMessage
       throw err
     } finally {
       loading.value = false
@@ -198,7 +212,9 @@ export const useSupabaseAuthStore = defineStore('supabaseAuth', () => {
 
       return data
     } catch (err: any) {
-      error.value = err.message || '登录失败'
+      logError(err, 'User login')
+      const userFriendlyMessage = showUserFriendlyError(err)
+      error.value = userFriendlyMessage
       throw err
     } finally {
       loading.value = false
@@ -218,7 +234,7 @@ export const useSupabaseAuthStore = defineStore('supabaseAuth', () => {
         try {
           // 添加超时控制，避免长时间等待
           const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error('登出请求超时')), 5000)
+            setTimeout(() => reject(new Error('登出请求超时')), 10000)
           })
           
           const logoutPromise = supabase.auth.signOut({ scope: 'local' })
@@ -232,7 +248,9 @@ export const useSupabaseAuthStore = defineStore('supabaseAuth', () => {
           }
         } catch (networkError: any) {
           // 捕获所有网络相关错误，包括 ERR_ABORTED
-          console.warn('登出请求失败（可能是网络问题），继续清除本地状态:', networkError.message)
+          logError(networkError, 'Logout request')
+          const userMessage = showUserFriendlyError(networkError)
+          console.warn('登出请求失败（可能是网络问题），继续清除本地状态:', userMessage)
         }
       } else {
         console.log('没有有效会话或 Supabase 实例，直接清除本地状态')
@@ -269,11 +287,13 @@ export const useSupabaseAuthStore = defineStore('supabaseAuth', () => {
       }
       
     } catch (err: any) {
-      error.value = err.message || '登出失败'
+      logError(err, 'Logout process')
+      const userFriendlyMessage = showUserFriendlyError(err)
+      error.value = userFriendlyMessage
       // 即使出错也要清除本地状态
       user.value = null
       session.value = null
-      console.error('登出过程中出现错误:', err)
+      console.error('登出过程中出现错误:', userFriendlyMessage)
     } finally {
       loading.value = false
     }

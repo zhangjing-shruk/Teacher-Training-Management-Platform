@@ -389,7 +389,6 @@
               </button>
               <button
                 type="submit"
-                @click="handleSubmitClick"
                 class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
               >
                 {{ showAddModal ? '添加' : '保存' }}
@@ -616,18 +615,18 @@ const deleteMaterial = async (material: Material) => {
   }
 }
 
-const handleSubmitClick = (event: Event) => {
-  console.log('提交按钮被点击')
-  event.preventDefault()
-  submitMaterial()
-}
-
 const submitMaterial = async () => {
   console.log('submitMaterial 函数被调用')
   console.log('表单数据:', materialForm.value)
   console.log('选中的文件:', selectedFile.value)
+  console.log('showAddModal:', showAddModal.value)
+  console.log('showEditModal:', showEditModal.value)
+  
+  // 清除之前的错误信息
+  uploadError.value = ''
   
   if (!materialForm.value.title || !materialForm.value.type) {
+    uploadError.value = '请填写完整的资料信息'
     alert('请填写完整的资料信息')
     return
   }
@@ -636,8 +635,11 @@ const submitMaterial = async () => {
     // 添加新资料
     if (!selectedFile.value) {
       uploadError.value = '请选择要上传的文件'
+      alert('请选择要上传的文件')
       return
     }
+    
+    console.log('开始创建新资料...')
 
     try {
       uploadProgress.value = 0
@@ -652,6 +654,7 @@ const submitMaterial = async () => {
       formData.append('file', selectedFile.value)
 
       // 使用 Supabase 服务创建培训资料
+      console.log('导入 TrainingMaterialService...')
       const { TrainingMaterialService } = await import('@/services/supabaseService')
       
       // 创建培训资料记录
@@ -667,7 +670,9 @@ const submitMaterial = async () => {
           created_by: 'manager'
         }
       
+      console.log('准备创建资料，数据:', materialData)
       const newMaterial = await TrainingMaterialService.create(materialData)
+      console.log('资料创建成功:', newMaterial)
       
       // 转换为前端格式
        const materialToAdd: Material = {
@@ -690,7 +695,6 @@ const submitMaterial = async () => {
       uploadError.value = error instanceof Error ? error.message : '上传失败'
       console.error('文件上传错误:', error)
       alert('上传失败：' + (error instanceof Error ? error.message : '未知错误'))
-      closeModal()
       return
     }
   } else if (showEditModal.value && selectedMaterial.value) {

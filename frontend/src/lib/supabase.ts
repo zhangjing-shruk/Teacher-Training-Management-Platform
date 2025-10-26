@@ -17,7 +17,24 @@ export const supabase = hasValidSupabaseConfig ? createClient(supabaseUrl, supab
   auth: {
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: true
+    detectSessionInUrl: true,
+    // 增加认证相关的超时设置
+    flowType: 'pkce'
+  },
+  global: {
+    headers: {
+      'X-Client-Info': 'ai-teacher-training-platform'
+    }
+  },
+  // 添加数据库连接配置
+  db: {
+    schema: 'public'
+  },
+  // 添加实时连接配置
+  realtime: {
+    params: {
+      eventsPerSecond: 10
+    }
   }
 }) : null
 
