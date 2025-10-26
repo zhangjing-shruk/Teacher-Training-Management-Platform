@@ -130,26 +130,74 @@ const recentActivities = ref<Activity[]>([])
 // 加载统计数据
 const loadStats = async () => {
   try {
-    // TODO: 调用API获取统计数据
-    // const response = await fetch('/api/manager/stats')
-    // const data = await response.json()
-    // stats.value = data
-    console.log('加载统计数据')
+    const token = localStorage.getItem('token')
+    if (!token) {
+      console.error('未找到认证令牌')
+      return
+    }
+
+    const response = await fetch('http://localhost:8000/api/manager/stats', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const data = await response.json()
+    stats.value = {
+      totalTeachers: data.total_teachers,
+      completedTraining: data.completed_training,
+      inProgressTraining: data.in_progress_training,
+      pendingReviews: data.pending_reviews
+    }
+    console.log('统计数据加载成功:', data)
   } catch (error) {
     console.error('加载统计数据失败:', error)
+    // 加载默认数据
+    stats.value = {
+      totalTeachers: 0,
+      completedTraining: 0,
+      inProgressTraining: 0,
+      pendingReviews: 0
+    }
   }
 }
 
 // 加载最近活动
 const loadRecentActivities = async () => {
   try {
-    // TODO: 调用API获取最近活动
-    // const response = await fetch('/api/manager/activities')
-    // const data = await response.json()
-    // recentActivities.value = data
-    console.log('加载最近活动')
+    const token = localStorage.getItem('token')
+    if (!token) {
+      console.error('未找到认证令牌')
+      return
+    }
+
+    const response = await fetch('http://localhost:8000/api/manager/activities', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const data = await response.json()
+    recentActivities.value = data.activities || []
+    console.log('最近活动加载成功:', data)
   } catch (error) {
     console.error('加载最近活动失败:', error)
+    // 加载默认数据
+    recentActivities.value = [
+      { id: 1, description: '暂无最近活动', time: '刚刚' }
+    ]
   }
 }
 

@@ -248,13 +248,38 @@ const teachers = ref<Teacher[]>([])
 // 加载教师数据
 const loadTeachers = async () => {
   try {
-    // TODO: 调用API获取教师数据
-    // const response = await fetch('/api/manager/teachers')
-    // const data = await response.json()
-    // teachers.value = data
-    console.log('加载教师数据')
+    const token = localStorage.getItem('token')
+    if (!token) {
+      console.error('未找到认证令牌')
+      return
+    }
+
+    const response = await fetch('http://localhost:8000/api/manager/teachers', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const data = await response.json()
+    teachers.value = data.map((teacher: any) => ({
+      id: teacher.id,
+      name: teacher.name,
+      email: teacher.email,
+      status: teacher.training_status,
+      lectureCount: 0, // TODO: 从API获取实际的讲座数量
+      createdAt: teacher.created_at
+    }))
+    console.log('教师数据加载成功:', data)
   } catch (error) {
     console.error('加载教师数据失败:', error)
+    // 加载默认数据
+    teachers.value = []
   }
 }
 const searchQuery = ref('')

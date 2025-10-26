@@ -1,11 +1,13 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from pydantic import BaseModel
 import os
 import uuid
 import shutil
 from pathlib import Path
+from datetime import datetime, timedelta
 
 from app.core.database import get_db
 from app.api.auth import get_current_user
@@ -84,13 +86,33 @@ async def get_manager_stats(
     db: Session = Depends(get_db)
 ):
     """获取管理员统计数据"""
-    # TODO: 实现真实的统计查询
-    # 目前返回模拟数据
+    from app.models.user import TrainingStatus
+    
+    # 获取教师总数
+    total_teachers = db.query(User).filter(User.role == UserRole.TEACHER).count()
+    
+    # 获取已完成培训的教师数
+    completed_training = db.query(User).filter(
+        User.role == UserRole.TEACHER,
+        User.training_status == TrainingStatus.COMPLETED
+    ).count()
+    
+    # 获取进行中培训的教师数
+    in_progress_training = db.query(User).filter(
+        User.role == UserRole.TEACHER,
+        User.training_status == TrainingStatus.IN_PROGRESS
+    ).count()
+    
+    # 获取待评审的练习会话数
+    pending_reviews = db.query(PracticeSession).filter(
+        PracticeSession.status == "pending_review"
+    ).count()
+    
     return ManagerStats(
-        total_teachers=156,
-        completed_training=89,
-        in_progress_training=45,
-        pending_reviews=12
+        total_teachers=total_teachers,
+        completed_training=completed_training,
+        in_progress_training=in_progress_training,
+        pending_reviews=pending_reviews
     )
 
 
@@ -100,14 +122,62 @@ async def get_recent_activities(
     db: Session = Depends(get_db)
 ):
     """获取最近活动"""
-    # TODO: 实现真实的活动查询
-    # API占位符
+    from datetime import datetime, timedelta
+    from sqlalchemy import desc, or_
+    
+    # 获取最近7天的活动
+    recent_date = datetime.now() - timedelta(days=7)
+    
+    activities = []
+    
+    # 获取最近的练习会话
+    recent_sessions = db.query(PracticeSession, User).join(
+        User, PracticeSession.user_id == User.id
+    ).filter(
+        PracticeSession.created_at >= recent_date
+    ).order_by(desc(PracticeSession.created_at)).limit(10).all()
+    
+    for session, user in recent_sessions:
+        time_diff = datetime.now() - session.created_at
+        if time_diff.days > 0:
+            time_str = f"{time_diff.days}天前"
+        elif time_diff.seconds > 3600:
+            time_str = f"{time_diff.seconds // 3600}小时前"
+        else:
+            time_str = f"{time_diff.seconds // 60}分钟前"
+        
+        activities.append({
+            "id": session.id,
+            "description": f"{user.name}完成了试讲练习",
+            "time": time_str
+        })
+    
+    # 获取最近注册的教师
+    recent_teachers = db.query(User).filter(
+        User.role == UserRole.TEACHER,
+        User.created_at >= recent_date
+    ).order_by(desc(User.created_at)).limit(5).all()
+    
+    for teacher in recent_teachers:
+        time_diff = datetime.now() - teacher.created_at
+        if time_diff.days > 0:
+            time_str = f"{time_diff.days}天前"
+        elif time_diff.seconds > 3600:
+            time_str = f"{time_diff.seconds // 3600}小时前"
+        else:
+            time_str = f"{time_diff.seconds // 60}分钟前"
+        
+        activities.append({
+            "id": f"user_{teacher.id}",
+            "description": f"新教师{teacher.name}注册了账户",
+            "time": time_str
+        })
+    
+    # 按时间排序
+    activities.sort(key=lambda x: x["time"])
+    
     return {
-        "activities": [
-            {"id": 1, "description": "张老师完成了试讲练习", "time": "2小时前"},
-            {"id": 2, "description": "李老师提交了讲座视频", "time": "4小时前"},
-            {"id": 3, "description": "王老师开始了SOP学习", "time": "6小时前"}
-        ]
+        "activities": activities[:15]  # 返回最近15条活动
     }
 
 
@@ -412,6 +482,144 @@ async def get_analytics_overview(
     # TODO: 实现数据分析
     # API占位符
     return {"message": "数据分析功能开发中", "data": {}}
+
+
+@router.get("/analytics")
+async def get_analytics(
+    current_user: User = Depends(verify_manager_role),
+    db: Session = Depends(get_db)
+):
+    """获取分析数据"""
+    try:
+        from datetime import datetime, timedelta
+        from sqlalchemy import func
+        
+        # 获取活跃教师数量（最近30天有活动的教师）
+        thirty_days_ago = datetime.now() - timedelta(days=30)
+        active_teachers = db.query(User).filter(
+            User.role == UserRole.TEACHER,
+            User.last_login >= thirty_days_ago
+        ).count()
+        
+        # 获取完成的讲座数量
+        completed_lectures = db.query(PracticeSession).filter(
+            PracticeSession.status == "completed"
+        ).count()
+        
+        # 计算平均评分
+        avg_score_result = db.query(func.avg(PracticeSession.overall_score)).filter(
+            PracticeSession.overall_score.isnot(None)
+        ).scalar()
+        average_score = round(float(avg_score_result or 0), 1)
+        
+        # 计算平均时长（分钟）
+        avg_duration_result = db.query(func.avg(PracticeSession.duration)).filter(
+            PracticeSession.duration.isnot(None)
+        ).scalar()
+        average_duration = round(float(avg_duration_result or 0) / 60, 1)  # 转换为分钟
+        
+        return {
+            "activeTeachers": active_teachers,
+            "completedLectures": completed_lectures,
+            "averageScore": average_score,
+            "averageDuration": average_duration
+        }
+    except Exception as e:
+        print(f"获取分析数据失败: {str(e)}")
+        return {
+            "activeTeachers": 0,
+            "completedLectures": 0,
+            "averageScore": 0.0,
+            "averageDuration": 0.0
+        }
+
+
+@router.get("/top-teachers")
+async def get_top_teachers(
+    current_user: User = Depends(verify_manager_role),
+    db: Session = Depends(get_db)
+):
+    """获取顶级教师数据"""
+    try:
+        # 获取评分最高的教师
+        top_teachers = db.query(
+            User.id,
+            User.name,
+            User.email,
+            func.avg(PracticeSession.overall_score).label('avg_score'),
+            func.count(PracticeSession.id).label('lecture_count')
+        ).join(
+            PracticeSession, User.id == PracticeSession.teacher_id
+        ).filter(
+            User.role == UserRole.TEACHER,
+            PracticeSession.overall_score.isnot(None)
+        ).group_by(
+            User.id, User.name, User.email
+        ).order_by(
+            func.avg(PracticeSession.overall_score).desc()
+        ).limit(5).all()
+        
+        result = []
+        for i, teacher in enumerate(top_teachers):
+            result.append({
+                "id": teacher.id,
+                "name": teacher.name,
+                "email": teacher.email,
+                "rank": i + 1,
+                "score": round(float(teacher.avg_score or 0), 1),
+                "lectureCount": teacher.lecture_count
+            })
+        
+        return result
+    except Exception as e:
+        print(f"获取顶级教师数据失败: {str(e)}")
+        return []
+
+
+@router.get("/recent-activities")
+async def get_recent_activities(
+    current_user: User = Depends(verify_manager_role),
+    db: Session = Depends(get_db)
+):
+    """获取最近活动数据"""
+    try:
+        activities = []
+        
+        # 获取最近的练习会话
+        recent_sessions = db.query(PracticeSession).join(
+            User, PracticeSession.teacher_id == User.id
+        ).order_by(PracticeSession.created_at.desc()).limit(10).all()
+        
+        for session in recent_sessions:
+            activities.append({
+                "id": session.id,
+                "type": "lecture",
+                "title": f"{session.teacher.name} 完成了讲座练习",
+                "description": f"模式: {session.mode}, 评分: {session.overall_score or 'N/A'}",
+                "timestamp": session.created_at.isoformat()
+            })
+        
+        # 获取最近注册的教师
+        recent_teachers = db.query(User).filter(
+            User.role == UserRole.TEACHER
+        ).order_by(User.created_at.desc()).limit(5).all()
+        
+        for teacher in recent_teachers:
+            activities.append({
+                "id": f"teacher_{teacher.id}",
+                "type": "login",
+                "title": f"新教师 {teacher.name} 加入平台",
+                "description": f"邮箱: {teacher.email}",
+                "timestamp": teacher.created_at.isoformat()
+            })
+        
+        # 按时间排序
+        activities.sort(key=lambda x: x["timestamp"], reverse=True)
+        
+        return activities[:15]  # 返回最近15条活动
+    except Exception as e:
+        print(f"获取最近活动数据失败: {str(e)}")
+        return []
 
 
 # 同步相关API

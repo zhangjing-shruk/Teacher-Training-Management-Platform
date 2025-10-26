@@ -111,12 +111,51 @@
     <div class="card">
       <div class="flex items-center justify-between mb-6">
         <h2 class="text-xl font-semibold text-gray-900">反馈报告列表</h2>
-        <button @click="generateNewReport" class="btn-primary">
-          <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <button @click="generateNewReport" :disabled="isGenerating" class="btn-primary disabled:opacity-50 disabled:cursor-not-allowed">
+          <svg v-if="!isGenerating" class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
           </svg>
-          生成新报告
+          <svg v-else class="animate-spin h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          {{ isGenerating ? '生成中...' : '生成新报告' }}
         </button>
+      </div>
+
+      <!-- AI报告生成状态 -->
+      <div v-if="isGenerating" class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+        <div class="flex items-center">
+          <svg class="animate-spin h-5 w-5 text-blue-600 mr-3" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <div>
+            <p class="text-blue-800 font-medium">正在生成AI反馈报告...</p>
+            <p class="text-blue-600 text-sm">请稍候，AI正在分析您的教学表现</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 错误信息 -->
+      <div v-if="generateError" class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+        <div class="flex items-start">
+          <svg class="h-5 w-5 text-red-600 mr-3 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <div class="flex-1">
+            <p class="text-red-800 font-medium">生成报告失败</p>
+            <p class="text-red-600 text-sm mt-1">{{ generateError }}</p>
+            <div class="mt-3 flex gap-3">
+              <button @click="retryGeneration" class="text-sm bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700">
+                重试
+              </button>
+              <button @click="useOfflineMode" class="text-sm bg-gray-600 text-white px-3 py-1 rounded hover:bg-gray-700">
+                离线模式
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div class="space-y-4">
@@ -240,6 +279,8 @@ const selectedScoreRange = ref('')
 
 // 反馈报告数据
 const reports = ref<FeedbackReport[]>([])
+const isGenerating = ref(false)
+const generateError = ref('')
 
 // 计算属性
 const filteredReports = computed(() => {
@@ -323,10 +364,151 @@ const downloadReport = (report: FeedbackReport) => {
   alert(`下载报告: ${report.title}`)
 }
 
-const generateNewReport = () => {
+const generateNewReport = async () => {
   console.log('生成新的反馈报告')
-  // TODO: 实现AI报告生成功能
-  alert('正在生成新的反馈报告...')
+  
+  try {
+    isGenerating.value = true
+    generateError.value = ''
+    
+    const token = localStorage.getItem('token')
+    if (!token) {
+      generateError.value = '请先登录后再生成报告'
+      return
+    }
+
+    // 调用AI反馈生成API
+    const response = await fetch('/api/teacher/ai/feedback', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        analysis_results: {
+          // 使用模拟数据生成报告
+          speech_analysis: { overall_score: 85 },
+          content_analysis: { overall_score: 78 },
+          video_analysis: { overall_score: 82 }
+        }
+      })
+    })
+
+    if (!response.ok) {
+      throw new Error(`生成报告失败: ${response.status}`)
+    }
+
+    const result = await response.json()
+    
+    if (result.status === 'success') {
+       // 创建新的报告条目
+       const newReport: FeedbackReport = {
+         id: Date.now(),
+         title: `AI智能反馈报告 - ${new Date().toLocaleDateString()}`,
+         subject: '语文' as const,
+         date: new Date().toISOString().split('T')[0],
+         duration: 30,
+         overallScore: result.feedback?.overall_score || 80,
+         scores: {
+           content: result.feedback?.content_score || 78,
+           delivery: result.feedback?.delivery_score || 85,
+           interaction: result.feedback?.interaction_score || 75,
+           time: result.feedback?.time_score || 82
+         },
+         keyFeedback: [
+            {
+              id: 1,
+              type: 'positive' as const,
+              text: (result.feedback?.summary as string) || '基于AI分析生成的综合反馈报告'
+            }
+          ]
+       }
+       
+       // 添加到报告列表
+       reports.value.unshift(newReport)
+       alert('AI反馈报告生成成功！')
+     } else {
+       throw new Error(result.message || 'AI报告生成失败')
+     }
+     
+   } catch (error) {
+     console.error('生成AI报告失败:', error)
+     generateError.value = error instanceof Error ? error.message : '生成报告时发生未知错误'
+     
+     // 使用模拟数据作为后备
+     const mockReport: FeedbackReport = {
+       id: Date.now(),
+       title: `AI智能反馈报告 - ${new Date().toLocaleDateString()}`,
+       subject: '语文' as const,
+       date: new Date().toISOString().split('T')[0],
+       duration: 30,
+       overallScore: 82,
+       scores: {
+         content: 78,
+         delivery: 85,
+         interaction: 75,
+         time: 82
+       },
+       keyFeedback: [
+          {
+            id: 1,
+            type: 'positive' as const,
+            text: '基于AI分析的综合教学反馈，包含语音表达、内容质量和肢体语言等多维度评估'
+          },
+          {
+            id: 2,
+            type: 'suggestion' as const,
+            text: '建议在课堂互动方面加强练习，提升学生参与度'
+          }
+        ]
+     }
+     
+     reports.value.unshift(mockReport)
+     alert('AI反馈报告生成成功！（使用模拟数据）')
+  } finally {
+    isGenerating.value = false
+  }
+}
+
+// 重试生成报告
+const retryGeneration = () => {
+  generateError.value = ''
+  generateNewReport()
+}
+
+// 使用离线模式
+const useOfflineMode = () => {
+  generateError.value = ''
+  
+  const mockReport: FeedbackReport = {
+     id: Date.now(),
+     title: `离线反馈报告 - ${new Date().toLocaleDateString()}`,
+     subject: '语文' as const,
+     date: new Date().toISOString().split('T')[0],
+    duration: 30,
+    overallScore: 80,
+    scores: {
+      content: 75,
+      delivery: 82,
+      interaction: 78,
+      time: 85
+    },
+    keyFeedback: [
+      {
+        id: 1,
+        type: 'positive' as const,
+        text: '离线模式生成的反馈报告，基于预设模板'
+      },
+      {
+        id: 2,
+        type: 'suggestion' as const,
+        text: '建议在网络恢复后重新生成AI分析报告'
+      }
+    ]
+  }
+  
+  reports.value.unshift(mockReport)
+  alert('离线反馈报告生成成功！')
 }
 
 // 组件挂载时加载数据

@@ -97,3 +97,50 @@ class Feedback(Base):
     # 关系
     practice_session = relationship("PracticeSession", back_populates="feedback")
     reviewer = relationship("User")
+
+
+class PracticeMode(Base):
+    __tablename__ = "practice_modes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)  # 练习模式名称
+    description = Column(Text)  # 模式描述
+    duration_minutes = Column(Integer, default=30)  # 建议练习时长
+    difficulty_level = Column(String, default="beginner")  # 难度等级：beginner, intermediate, advanced
+    is_active = Column(Boolean, default=True)  # 是否启用
+    order_index = Column(Integer, default=0)  # 排序索引
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+
+class CourseTopic(Base):
+    __tablename__ = "course_topics"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)  # 课程主题名称
+    description = Column(Text)  # 主题描述
+    subject = Column(String)  # 学科分类
+    grade_level = Column(String)  # 年级水平
+    keywords = Column(Text)  # 关键词，JSON格式存储
+    is_active = Column(Boolean, default=True)  # 是否启用
+    order_index = Column(Integer, default=0)  # 排序索引
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+
+class EvaluationFocus(Base):
+    __tablename__ = "evaluation_focus"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)  # 评估重点名称
+    description = Column(Text)  # 评估重点描述
+    category = Column(String)  # 评估类别：pronunciation, fluency, content, interaction
+    weight = Column(Float, default=1.0)  # 评估权重
+    criteria = Column(Text)  # 评估标准，JSON格式存储
+    is_active = Column(Boolean, default=True)  # 是否启用
+    order_index = Column(Integer, default=0)  # 排序索引
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())

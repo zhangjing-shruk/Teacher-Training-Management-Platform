@@ -286,39 +286,96 @@ const performance = ref<Performance>({
 // 加载分析数据
 const loadAnalytics = async () => {
   try {
-    // TODO: 调用API获取分析数据
-    // const response = await fetch('/api/manager/analytics')
-    // const data = await response.json()
-    // analytics.value = data
-    console.log('加载分析数据')
+    const token = localStorage.getItem('token')
+    if (!token) {
+      console.error('未找到认证令牌')
+      return
+    }
+
+    const response = await fetch('http://localhost:8000/api/manager/analytics', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const data = await response.json()
+    analytics.value = data
+    console.log('分析数据加载成功:', data)
   } catch (error) {
     console.error('加载分析数据失败:', error)
+    // 设置默认值
+    analytics.value = {
+      activeTeachers: 0,
+      completedLectures: 0,
+      averageScore: 0,
+      averageDuration: 0
+    }
   }
 }
 
 // 加载顶级教师数据
 const loadTopTeachers = async () => {
   try {
-    // TODO: 调用API获取顶级教师数据
-    // const response = await fetch('/api/manager/top-teachers')
-    // const data = await response.json()
-    // topTeachers.value = data
-    console.log('加载顶级教师数据')
+    const token = localStorage.getItem('token')
+    if (!token) {
+      console.error('未找到认证令牌')
+      return
+    }
+
+    const response = await fetch('http://localhost:8000/api/manager/top-teachers', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const data = await response.json()
+    topTeachers.value = data
+    console.log('顶级教师数据加载成功:', data)
   } catch (error) {
     console.error('加载顶级教师数据失败:', error)
+    topTeachers.value = []
   }
 }
 
 // 加载最近活动数据
 const loadRecentActivities = async () => {
   try {
-    // TODO: 调用API获取最近活动数据
-    // const response = await fetch('/api/manager/recent-activities')
-    // const data = await response.json()
-    // recentActivities.value = data
-    console.log('加载最近活动数据')
+    const token = localStorage.getItem('token')
+    if (!token) {
+      console.error('未找到认证令牌')
+      return
+    }
+
+    const response = await fetch('http://localhost:8000/api/manager/recent-activities', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const data = await response.json()
+    recentActivities.value = data
+    console.log('最近活动数据加载成功:', data)
   } catch (error) {
     console.error('加载最近活动数据失败:', error)
+    recentActivities.value = []
   }
 }
 
