@@ -1,0 +1,31 @@
+name: Force Vercel Deployment
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  trigger-deployment:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Trigger Vercel deployment
+        run: |
+          echo "Triggering Vercel deployment..."
+          echo "Timestamp: $(date)"
+          echo "This workflow helps bypass Vercel free tier limitations"
+          
+      - name: Create deployment marker
+        run: |
+          echo "Deployment triggered at $(date)" > deployment-marker.txt
+          
+      - name: Commit deployment marker
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add deployment-marker.txt || true
+          git commit -m "chore: deployment marker $(date)" || true
+          git push || true
