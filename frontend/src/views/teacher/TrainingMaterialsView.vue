@@ -70,6 +70,7 @@
             <option value="student_interaction">学生互动</option>
             <option value="assessment">评估技巧</option>
             <option value="教学文档">教学文档</option>
+            <option value="其他培训文档">其他培训文档</option>
           </select>
         </div>
 
@@ -402,7 +403,8 @@ const getCategoryColor = (category: string) => {
     classroom_management: { bg: 'bg-green-100', text: 'text-green-600' },
     student_interaction: { bg: 'bg-purple-100', text: 'text-purple-600' },
     assessment: { bg: 'bg-orange-100', text: 'text-orange-600' },
-    '教学文档': { bg: 'bg-blue-100', text: 'text-blue-600' }
+    '教学文档': { bg: 'bg-blue-100', text: 'text-blue-600' },
+    '其他培训文档': { bg: 'bg-indigo-100', text: 'text-indigo-600' }
   }
   return colors[category as keyof typeof colors] || colors.teaching_methods
 }
@@ -413,7 +415,8 @@ const getCategoryIcon = (category: string) => {
     classroom_management: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4',
     student_interaction: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z',
     assessment: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4',
-    '教学文档': 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253'
+    '教学文档': 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253',
+    '其他培训文档': 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'
   }
   return icons[category as keyof typeof icons] || icons.teaching_methods
 }
@@ -424,7 +427,8 @@ const getCategoryName = (category: string) => {
     classroom_management: '课堂管理',
     student_interaction: '学生互动',
     assessment: '评估技巧',
-    '教学文档': '教学文档'
+    '教学文档': '教学文档',
+    '其他培训文档': '其他培训文档'
   }
   return names[category as keyof typeof names] || category || '未知分类'
 }

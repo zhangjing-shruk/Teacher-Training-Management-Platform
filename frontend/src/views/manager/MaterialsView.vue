@@ -263,6 +263,7 @@
                   >
                     <option value="">请选择类别</option>
                     <option value="教学文档">教学文档</option>
+                    <option value="其他培训文档">其他培训文档</option>
                   </select>
                 </div>
 
@@ -388,6 +389,7 @@
               </button>
               <button
                 type="submit"
+                @click="handleSubmitClick"
                 class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
               >
                 {{ showAddModal ? '添加' : '保存' }}
@@ -614,7 +616,17 @@ const deleteMaterial = async (material: Material) => {
   }
 }
 
+const handleSubmitClick = (event: Event) => {
+  console.log('提交按钮被点击')
+  event.preventDefault()
+  submitMaterial()
+}
+
 const submitMaterial = async () => {
+  console.log('submitMaterial 函数被调用')
+  console.log('表单数据:', materialForm.value)
+  console.log('选中的文件:', selectedFile.value)
+  
   if (!materialForm.value.title || !materialForm.value.type) {
     alert('请填写完整的资料信息')
     return
@@ -677,6 +689,8 @@ const submitMaterial = async () => {
     } catch (error) {
       uploadError.value = error instanceof Error ? error.message : '上传失败'
       console.error('文件上传错误:', error)
+      alert('上传失败：' + (error instanceof Error ? error.message : '未知错误'))
+      closeModal()
       return
     }
   } else if (showEditModal.value && selectedMaterial.value) {
