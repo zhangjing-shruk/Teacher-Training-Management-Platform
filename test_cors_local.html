@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CORS 测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <h1>CORS 配置测试</h1>
+    <p>此页面用于测试本地后端的 CORS 配置是否正确。</p>
+    
+    <div>
+        <button onclick="testCORS()">测试 CORS 配置</button>
+        <button onclick="testPreflight()">测试预检请求</button>
+        <button onclick="clearResults()">清除结果</button>
+    </div>
+    
+    <div id="results"></div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:8000';
+        const resultsDiv = document.getElementById('results');
+
+        function addResult(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            div.innerHTML = `<strong>${new Date().toLocaleTimeString()}</strong>: ${message}`;
+            resultsDiv.appendChild(div);
+        }
+
+        function clearResults() {
+            resultsDiv.innerHTML = '';
+        }
+
+        async function testCORS() {
+            addResult('开始测试 CORS 配置...', 'info');
+            
+            try {
+                // 测试简单的 GET 请求
+                const response = await fetch(`${API_BASE_URL}/`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.text();
+                    addResult(`✅ GET 请求成功: ${data}`, 'success');
+                } else {
+                    addResult(`❌ GET 请求失败: ${response.status} ${response.statusText}`, 'error');
+                }
+            } catch (error) {
+                addResult(`❌ CORS 错误: ${error.message}`, 'error');
+            }
+        }
+
+        async function testPreflight() {
+            addResult('开始测试预检请求...', 'info');
+            
+            try {
+                // 测试会触发预检请求的复杂请求
+                const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Custom-Header': 'test'
+                    },
+                    body: JSON.stringify({
+                        test: 'data'
+                    })
+                });
+                
+                if (response.status === 422 || response.status === 404) {
+                    // 422 或 404 表示请求到达了服务器，CORS 配置正确
+                    addResult(`✅ 预检请求成功，CORS 配置正确 (状态码: ${response.status})`, 'success');
+                } else if (response.ok) {
+                    addResult(`✅ POST 请求成功`, 'success');
+                } else {
+                    addResult(`⚠️ POST 请求返回: ${response.status} ${response.statusText}`, 'info');
+                }
+            } catch (error) {
+                if (error.message.includes('CORS')) {
+                    addResult(`❌ CORS 预检失败: ${error.message}`, 'error');
+                } else {
+                    addResult(`⚠️ 其他错误: ${error.message}`, 'info');
+                }
+            }
+        }
+
+        // 页面加载时自动测试
+        window.onload = function() {
+            addResult('页面加载完成，准备测试 CORS 配置', 'info');
+            setTimeout(testCORS, 1000);
+        };
+    </script>
+</body>
+</html>

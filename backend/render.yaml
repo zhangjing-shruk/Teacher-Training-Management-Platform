@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: ai-teacher-training-backend
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: PRODUCTION_FRONTEND_URL
+        value: https://teacher-training-management-platfor.vercel.app
+      - key: VERCEL_DOMAIN
+        value: teacher-training-management-platfor.vercel.app
+      - key: DEBUG
+        value: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
