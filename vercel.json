@@ -4,9 +4,21 @@
   "installCommand": "cd frontend && npm ci",
   "framework": "vite",
   "ignoreCommand": "npx vercel-ignore",
-  "functions": {},
+  "functions": {
+    "api/*.py": {
+      "runtime": "python3.9"
+    }
+  },
   "_comment": "Updated for file preview functionality fix",
   "rewrites": [
+    {
+      "source": "/api/hello",
+      "destination": "/api/hello.py"
+    },
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index.py"
+    },
     {
       "source": "/(.*)",
       "destination": "/index.html"
