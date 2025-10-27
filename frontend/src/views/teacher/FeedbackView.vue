@@ -221,6 +221,39 @@
               </div>
             </div>
           </div>
+
+          <!-- 管理员反馈 -->
+          <div v-if="report.managerFeedback" class="bg-blue-50 rounded-lg p-4 mt-4">
+            <h4 class="font-medium text-blue-900 mb-2">管理员反馈</h4>
+            <p class="text-sm text-blue-800">{{ report.managerFeedback || '暂无管理员反馈' }}</p>
+            <div v-if="report.reviewedAt" class="text-xs text-blue-600 mt-2">
+              审核时间: {{ report.reviewedAt || '未知' }} 
+              <span v-if="report.reviewedBy">| 审核人: {{ report.reviewedBy || '未知' }}</span>
+            </div>
+          </div>
+
+          <!-- AI建议 -->
+          <div v-if="report.aiSuggestions" class="bg-green-50 rounded-lg p-4 mt-4">
+            <h4 class="font-medium text-green-900 mb-2">AI智能建议</h4>
+            <p class="text-sm text-green-800">{{ report.aiSuggestions || '暂无AI建议' }}</p>
+          </div>
+
+          <!-- 状态和备注 -->
+          <div class="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
+            <div class="flex items-center gap-2">
+              <span class="text-sm text-gray-600">状态:</span>
+              <span class="px-2 py-1 text-xs font-medium rounded-full"
+                    :class="report.status === 'completed' ? 'bg-green-100 text-green-800' : 
+                           report.status === 'reviewed' ? 'bg-blue-100 text-blue-800' : 
+                           'bg-yellow-100 text-yellow-800'">
+                {{ report.status === 'completed' ? '已完成' : 
+                   report.status === 'reviewed' ? '已审核' : '待处理' }}
+              </span>
+            </div>
+            <div v-if="report.notes" class="text-xs text-gray-500">
+              备注: {{ report.notes || '无' }}
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -272,6 +305,12 @@ interface FeedbackReport {
     type: 'positive' | 'negative' | 'suggestion'
     text: string
   }>
+  managerFeedback?: string
+  aiSuggestions?: string
+  reviewedAt?: string
+  reviewedBy?: string
+  status?: 'pending' | 'reviewed' | 'completed'
+  notes?: string
 }
 
 // 筛选条件
@@ -408,7 +447,7 @@ const generateNewReport = async () => {
          id: Date.now(),
          title: `AI智能反馈报告 - ${new Date().toLocaleDateString()}`,
          subject: '语文',
-         date: new Date().toISOString().split('T')[0],
+         date: new Date().toISOString().split('T')[0] || new Date().toLocaleDateString(),
          duration: 30,
          overallScore: result.feedback?.overall_score || 80,
          scores: {
@@ -423,7 +462,13 @@ const generateNewReport = async () => {
               type: 'positive' as const,
               text: result.feedback?.summary || '基于AI分析生成的综合反馈报告'
             }
-          ]
+          ],
+          managerFeedback: result.feedback?.manager_feedback,
+          aiSuggestions: result.feedback?.ai_suggestions,
+          reviewedAt: result.feedback?.reviewed_at,
+          reviewedBy: result.feedback?.reviewed_by,
+          status: result.feedback?.status || 'pending',
+          notes: result.feedback?.notes
        }
        
        // 添加到报告列表
@@ -442,7 +487,7 @@ const generateNewReport = async () => {
        id: Date.now(),
        title: `AI智能反馈报告 - ${new Date().toLocaleDateString()}`,
        subject: '语文',
-       date: new Date().toISOString().split('T')[0],
+       date: new Date().toISOString().split('T')[0] || new Date().toLocaleDateString(),
        duration: 30,
        overallScore: 82,
        scores: {
@@ -462,7 +507,8 @@ const generateNewReport = async () => {
             type: 'suggestion' as const,
             text: '建议在课堂互动方面加强练习，提升学生参与度'
           }
-        ]
+        ],
+        status: 'pending'
      }
      
      reports.value.unshift(mockReport)
@@ -486,7 +532,7 @@ const useOfflineMode = () => {
      id: Date.now(),
      title: `离线反馈报告 - ${new Date().toLocaleDateString()}`,
      subject: '语文',
-     date: new Date().toISOString().split('T')[0],
+     date: new Date().toISOString().split('T')[0] || new Date().toLocaleDateString(),
     duration: 30,
     overallScore: 80,
     scores: {
@@ -506,7 +552,8 @@ const useOfflineMode = () => {
         type: 'suggestion' as const,
         text: '建议在网络恢复后重新生成AI分析报告'
       }
-    ]
+    ],
+    status: 'pending'
   }
   
   reports.value.unshift(mockReport)

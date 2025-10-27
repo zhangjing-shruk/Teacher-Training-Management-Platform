@@ -1,6 +1,7 @@
 from typing import List
 from pydantic_settings import BaseSettings
 from pydantic import Field
+import os
 
 
 class Settings(BaseSettings):
@@ -9,21 +10,53 @@ class Settings(BaseSettings):
     VERSION: str = "1.0.0"
     DEBUG: bool = True
     
+    # 环境检测
+    ENVIRONMENT: str = Field(default="development", description="运行环境: development, production")
+    
     # 服务器配置
     HOST: str = "0.0.0.0"
     PORT: int = 8000
     
-    # 跨域配置 (CORS origins)
-    CORS_ORIGINS: List[str] = [
-        "http://localhost:5173", 
-        "http://127.0.0.1:5173",
-        "http://localhost:8001",
-        "http://127.0.0.1:8001",
-        "http://localhost",
-        "http://127.0.0.1",
-        "https://teacher-training-management-platform-tyu-9247hvun.vercel.app",
-        "https://*.vercel.app"
-    ]
+    # 生产环境域名配置
+    PRODUCTION_FRONTEND_URL: str = Field(default="", description="生产环境前端域名")
+    VERCEL_DOMAIN: str = Field(default="", description="Vercel部署域名")
+    
+    @property
+    def CORS_ORIGINS(self) -> List[str]:
+        """根据环境动态配置CORS origins"""
+        # 开发环境允许的源
+        development_origins = [
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+            "http://localhost:8001",
+            "http://127.0.0.1:8001",
+        ]
+        
+        # 生产环境允许的源
+        production_origins = []
+        
+        # 添加配置的生产域名
+        if self.PRODUCTION_FRONTEND_URL:
+            production_origins.append(self.PRODUCTION_FRONTEND_URL)
+        
+        if self.VERCEL_DOMAIN:
+            production_origins.append(f"https://{self.VERCEL_DOMAIN}")
+        
+        # 检测是否在Vercel环境
+        is_vercel = os.getenv("VERCEL") == "1"
+        is_production = self.ENVIRONMENT == "production" or is_vercel
+        
+        if is_production:
+            # 生产环境：只允许配置的域名 + 本地开发（用于调试）
+            return production_origins + [
+                "http://localhost:5173",  # 允许本地前端访问Vercel后端
+                "http://127.0.0.1:5173"
+            ]
+        else:
+            # 开发环境：允许所有开发域名
+            return development_origins
     
     # 可信主机配置 (不包含协议)
     ALLOWED_HOSTS: List[str] = [
