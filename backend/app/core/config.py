@@ -41,8 +41,11 @@ class Settings(BaseSettings):
         if self.PRODUCTION_FRONTEND_URL:
             production_origins.append(self.PRODUCTION_FRONTEND_URL)
         
+        # 添加 Vercel 域名（如果与 PRODUCTION_FRONTEND_URL 不同）
         if self.VERCEL_DOMAIN:
-            production_origins.append(f"https://{self.VERCEL_DOMAIN}")
+            vercel_url = f"https://{self.VERCEL_DOMAIN}"
+            if vercel_url not in production_origins:
+                production_origins.append(vercel_url)
         
         # 检测是否在Vercel环境
         is_vercel = os.getenv("VERCEL") == "1"
@@ -93,8 +96,36 @@ class Settings(BaseSettings):
     MAX_FILE_SIZE: int = 10 * 1024 * 1024  # 10MB
     
     class Config:
-        env_file = ".env"
         case_sensitive = True
+        
+        @classmethod
+        def env_file(cls):
+            """根据环境动态选择配置文件"""
+            env = os.getenv("ENVIRONMENT", "development")
+            is_vercel = os.getenv("VERCEL") == "1"
+            
+            if env == "production" or is_vercel:
+                return ".env.production"
+            else:
+                return ".env"
 
 
-settings = Settings()
+# 创建设置实例，根据环境加载对应的配置文件
+def create_settings():
+    """创建设置实例"""
+    env = os.getenv("ENVIRONMENT", "development")
+    is_vercel = os.getenv("VERCEL") == "1"
+    
+    if env == "production" or is_vercel:
+        env_file = ".env.production"
+    else:
+        env_file = ".env"
+    
+    # 检查文件是否存在
+    if os.path.exists(env_file):
+        return Settings(_env_file=env_file)
+    else:
+        # 如果指定的环境文件不存在，使用默认配置
+        return Settings()
+
+settings = create_settings()
