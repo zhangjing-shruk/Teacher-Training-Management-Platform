@@ -96,10 +96,10 @@ export const useSupabaseAuthStore = defineStore('supabaseAuth', () => {
         return Promise.resolve()
       }
       
-      // 获取当前会话（减少超时时间，增加重试机制）
+      // 获取当前会话（增加超时时间，改进重试机制）
       const sessionPromise = supabase.auth.getSession()
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Session fetch timeout')), 5000) // 减少到5秒
+        setTimeout(() => reject(new Error('Session fetch timeout')), 15000) // 增加到15秒
       )
       
       try {
@@ -141,9 +141,11 @@ export const useSupabaseAuthStore = defineStore('supabaseAuth', () => {
       } catch (timeoutError) {
         console.warn('Auth initialization timeout, retrying...', timeoutError)
         
-        // 重试机制：最多重试2次
-        if (retryCount < 2) {
-          await new Promise(resolve => setTimeout(resolve, 1000)) // 等待1秒
+        // 重试机制：最多重试3次，逐步增加等待时间
+        if (retryCount < 3) {
+          const waitTime = (retryCount + 1) * 2000 // 2秒、4秒、6秒
+          console.log(`认证初始化重试 ${retryCount + 1}/3，等待 ${waitTime}ms`)
+          await new Promise(resolve => setTimeout(resolve, waitTime))
           return initializeAuth(retryCount + 1)
         } else {
           console.warn('Auth initialization failed after retries, continuing without auth')
@@ -155,12 +157,13 @@ export const useSupabaseAuthStore = defineStore('supabaseAuth', () => {
       const userFriendlyMessage = showUserFriendlyError(err)
       error.value = userFriendlyMessage
       
-      // 如果是网络错误且重试次数少于2次，则重试
-      if (isNetworkError(err) && retryCount < 2) {
-        console.log(`认证初始化重试 ${retryCount + 1}/2`)
+      // 如果是网络错误且重试次数少于3次，则重试
+      if (isNetworkError(err) && retryCount < 3) {
+        const waitTime = (retryCount + 1) * 3000 // 3秒、6秒、9秒
+        console.log(`认证初始化重试 ${retryCount + 1}/3，等待 ${waitTime}ms`)
         setTimeout(() => {
           initializeAuth(retryCount + 1)
-        }, 2000) // 2秒后重试
+        }, waitTime)
         return
       }
       
@@ -242,7 +245,7 @@ export const useSupabaseAuthStore = defineStore('supabaseAuth', () => {
       })
       
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Registration timeout')), 10000) // 10秒超时
+        setTimeout(() => reject(new Error('Registration timeout')), 20000) // 增加到20秒超时
       )
 
       const { data: authData, error: authError } = await Promise.race([
@@ -329,7 +332,7 @@ export const useSupabaseAuthStore = defineStore('supabaseAuth', () => {
       })
       
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Login timeout')), 8000) // 8秒超时
+        setTimeout(() => reject(new Error('Login timeout')), 20000) // 增加到20秒超时
       )
 
       const { data, error: loginError } = await Promise.race([

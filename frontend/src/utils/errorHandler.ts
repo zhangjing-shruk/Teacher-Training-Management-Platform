@@ -12,10 +12,30 @@ const ERROR_MESSAGES: Record<string, ErrorInfo> = {
   'Session fetch timeout': {
     message: 'Session fetch timeout',
     type: 'timeout',
-    userMessage: '网络连接超时，正在重试...',
+    userMessage: '认证服务连接超时，正在自动重试...',
     suggestions: [
       '请检查网络连接',
-      '稍后再试',
+      '稍等片刻，系统正在重试',
+      '如果问题持续，请刷新页面重试'
+    ]
+  },
+  'Auth initialization timeout': {
+    message: 'Auth initialization timeout',
+    type: 'timeout',
+    userMessage: '认证初始化超时，正在重试连接...',
+    suggestions: [
+      '请稍等，系统正在重试',
+      '检查网络连接是否稳定',
+      '如果问题持续，请刷新页面'
+    ]
+  },
+  'Login timeout': {
+    message: 'Login timeout',
+    type: 'timeout',
+    userMessage: '登录请求超时，请重试',
+    suggestions: [
+      '请检查网络连接',
+      '重新尝试登录',
       '如果问题持续，请联系技术支持'
     ]
   },
