@@ -482,7 +482,7 @@ const lectures = ref<Lecture[]>([])
 // 加载试讲数据
 const loadLectures = async () => {
   try {
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
     const response = await fetch(`${API_BASE_URL}/api/manager/lectures`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('access_token')}`
@@ -648,7 +648,7 @@ const submitReview = async () => {
 // 课程主题管理函数
 const loadCourseTopics = async () => {
   try {
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
     const token = localStorage.getItem('access_token')
     
     console.log('🔍 调试信息:')
@@ -742,7 +742,7 @@ const deleteTopic = (index: number) => {
 
 const saveTopicsToServer = async () => {
   try {
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
     const response = await fetch(`${API_BASE_URL}/api/manager/course-topics/batch`, {
       method: 'POST',
       headers: {
