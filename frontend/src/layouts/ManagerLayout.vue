@@ -106,22 +106,63 @@
 </template>
 
 <script setup lang="ts">
+import { ref, onMounted, computed } from 'vue'
 import { useSupabaseAuthStore } from '@/stores/supabaseAuth'
 import { useRouter } from 'vue-router'
+import { componentCacheService } from '@/services/componentCacheService'
+import { preloadService } from '@/services/preloadService'
 
 const authStore = useSupabaseAuthStore()
 const router = useRouter()
 
+// 性能优化：缓存导航状态
+const { data: navigationState, updateCache: updateNavigationCache } = 
+  componentCacheService.createReactiveCache('manager:navigation', {
+    activeTab: 'dashboard',
+    lastVisited: Date.now()
+  })
+
+// 计算当前活跃的导航项
+const activeRoute = computed(() => router.currentRoute.value.name)
+
+// 优化的登出处理
+const isLoggingOut = ref(false)
 const handleLogout = async () => {
+  if (isLoggingOut.value) return // 防止重复点击
+  
+  isLoggingOut.value = true
   try {
     await authStore.logout()
+    // 清除缓存
+    componentCacheService.clear()
     router.push('/login')
   } catch (error) {
     console.error('登出失败:', error)
     // 即使登出失败，也跳转到登录页面
     router.push('/login')
+  } finally {
+    isLoggingOut.value = false
   }
 }
+
+// 组件挂载时的性能优化
+onMounted(async () => {
+  try {
+    // 预热缓存
+    await componentCacheService.warmupCache('manager')
+    
+    // 预加载管理员端组件
+    preloadService.preloadManagerComponents()
+    
+    // 更新导航状态
+    updateNavigationCache({
+      activeTab: String(activeRoute.value) || 'dashboard',
+      lastVisited: Date.now()
+    })
+  } catch (error) {
+    console.warn('Layout optimization failed:', error)
+  }
+})
 </script>
 
 <style scoped>

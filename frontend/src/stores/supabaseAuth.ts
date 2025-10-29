@@ -38,8 +38,38 @@ export const useSupabaseAuthStore = defineStore('supabaseAuth', () => {
   const isTeacher = computed(() => user.value?.role === USER_ROLES.TEACHER)
   const isManager = computed(() => user.value?.role === USER_ROLES.MANAGER)
 
+  // 添加初始化状态缓存
+  const isInitialized = ref(false)
+  const initializationPromise = ref<Promise<void> | null>(null)
+
   // 初始化认证状态
   const initializeAuth = async (retryCount = 0) => {
+    // 如果已经初始化过，直接返回
+    if (isInitialized.value) {
+      return Promise.resolve()
+    }
+    
+    // 如果正在初始化，返回现有的Promise
+    if (initializationPromise.value) {
+      return initializationPromise.value
+    }
+    
+    // 创建新的初始化Promise
+    initializationPromise.value = performInitialization(retryCount)
+    
+    try {
+      await initializationPromise.value
+      isInitialized.value = true
+    } catch (error) {
+      // 初始化失败，清除Promise以允许重试
+      initializationPromise.value = null
+      throw error
+    }
+    
+    return initializationPromise.value
+  }
+
+  const performInitialization = async (retryCount = 0) => {
     try {
       loading.value = true
       error.value = null
@@ -96,10 +126,10 @@ export const useSupabaseAuthStore = defineStore('supabaseAuth', () => {
         return Promise.resolve()
       }
       
-      // 获取当前会话（增加超时时间，改进重试机制）
+      // 获取当前会话（减少超时时间）
       const sessionPromise = supabase.auth.getSession()
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Session fetch timeout')), 15000) // 增加到15秒
+        setTimeout(() => reject(new Error('Session fetch timeout')), 5000) // 减少到5秒
       )
       
       try {
@@ -115,40 +145,38 @@ export const useSupabaseAuthStore = defineStore('supabaseAuth', () => {
         
         if (currentSession) {
           session.value = currentSession
-          try {
-            await fetchUserProfile(currentSession.user.id)
-          } catch (profileError) {
+          // 异步获取用户资料，不阻塞初始化
+          fetchUserProfile(currentSession.user.id).catch(profileError => {
             console.warn('Failed to fetch user profile:', profileError)
-            // 继续执行，不阻塞认证流程
-          }
+          })
         }
 
-        // 监听认证状态变化
-        supabase.auth.onAuthStateChange(async (event, newSession) => {
-          session.value = newSession
-          
-          if (newSession?.user) {
-            try {
-              await fetchUserProfile(newSession.user.id)
-            } catch (profileError) {
-              console.warn('Failed to fetch user profile on auth change:', profileError)
+        // 监听认证状态变化（只设置一次）
+        if (!isInitialized.value) {
+          supabase.auth.onAuthStateChange(async (event, newSession) => {
+            session.value = newSession
+            
+            if (newSession?.user) {
+              // 异步获取用户资料
+              fetchUserProfile(newSession.user.id).catch(profileError => {
+                console.warn('Failed to fetch user profile on auth change:', profileError)
+              })
+            } else {
+              user.value = null
             }
-          } else {
-            user.value = null
-          }
-        })
+          })
+        }
         
       } catch (timeoutError) {
-        console.warn('Auth initialization timeout, retrying...', timeoutError)
+        console.warn('Auth initialization timeout:', timeoutError)
         
-        // 重试机制：最多重试3次，逐步增加等待时间
-        if (retryCount < 3) {
-          const waitTime = (retryCount + 1) * 2000 // 2秒、4秒、6秒
-          console.log(`认证初始化重试 ${retryCount + 1}/3，等待 ${waitTime}ms`)
-          await new Promise(resolve => setTimeout(resolve, waitTime))
-          return initializeAuth(retryCount + 1)
+        // 简化重试机制：最多重试1次
+        if (retryCount < 1) {
+          console.log(`认证初始化重试 ${retryCount + 1}/1`)
+          await new Promise(resolve => setTimeout(resolve, 1000))
+          return performInitialization(retryCount + 1)
         } else {
-          console.warn('Auth initialization failed after retries, continuing without auth')
+          console.warn('Auth initialization failed after retry, continuing without auth')
           // 不抛出错误，允许应用继续运行
         }
       }
@@ -157,21 +185,16 @@ export const useSupabaseAuthStore = defineStore('supabaseAuth', () => {
       const userFriendlyMessage = showUserFriendlyError(err)
       error.value = userFriendlyMessage
       
-      // 如果是网络错误且重试次数少于3次，则重试
-      if (isNetworkError(err) && retryCount < 3) {
-        const waitTime = (retryCount + 1) * 3000 // 3秒、6秒、9秒
-        console.log(`认证初始化重试 ${retryCount + 1}/3，等待 ${waitTime}ms`)
-        setTimeout(() => {
-          initializeAuth(retryCount + 1)
-        }, waitTime)
-        return
-      }
-      
-      // 不要抛出错误，让应用继续运行
+      // 简化错误处理，不进行额外重试
+      console.warn('Auth initialization failed:', userFriendlyMessage)
     } finally {
       loading.value = false
     }
   }
+
+  // 用户资料缓存
+  const userProfileCache = ref<Map<string, { data: User, timestamp: number }>>(new Map())
+  const CACHE_DURATION = 5 * 60 * 1000 // 5分钟缓存
 
   // 获取用户资料
   const fetchUserProfile = async (userId: string) => {
@@ -180,8 +203,15 @@ export const useSupabaseAuthStore = defineStore('supabaseAuth', () => {
       return null
     }
     
+    // 检查缓存
+    const cached = userProfileCache.value.get(userId)
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      user.value = cached.data
+      return cached.data
+    }
+    
     try {
-      // 添加超时处理
+      // 减少超时时间
       const profilePromise = supabase
         .from('users')
         .select('*')
@@ -189,7 +219,7 @@ export const useSupabaseAuthStore = defineStore('supabaseAuth', () => {
         .single()
       
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('用户资料获取超时')), 10000)
+        setTimeout(() => reject(new Error('用户资料获取超时')), 3000) // 减少到3秒
       )
       
       const { data, error: fetchError } = await Promise.race([profilePromise, timeoutPromise]) as any
@@ -202,11 +232,18 @@ export const useSupabaseAuthStore = defineStore('supabaseAuth', () => {
         }
         throw fetchError
       }
+      
+      // 更新缓存
+      userProfileCache.value.set(userId, {
+        data: data,
+        timestamp: Date.now()
+      })
+      
       user.value = data
       return data
     } catch (err: any) {
       console.error('Error fetching user profile:', err)
-      error.value = err.message
+      // 不设置全局错误，避免影响其他功能
       return null
     }
   }
@@ -332,14 +369,14 @@ export const useSupabaseAuthStore = defineStore('supabaseAuth', () => {
       loading.value = true
       error.value = null
 
-      // 添加超时保护
+      // 减少超时时间
       const loginPromise = supabase.auth.signInWithPassword({
         email: credentials.email,
         password: credentials.password
       })
       
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Login timeout')), 20000) // 增加到20秒超时
+        setTimeout(() => reject(new Error('Login timeout')), 8000) // 减少到8秒超时
       )
 
       const { data, error: loginError } = await Promise.race([
@@ -349,15 +386,14 @@ export const useSupabaseAuthStore = defineStore('supabaseAuth', () => {
 
       if (loginError) throw loginError
 
-      // 立即获取用户资料
+      // 设置会话并异步获取用户资料
       if (data.user) {
         session.value = data.session
-        try {
-          await fetchUserProfile(data.user.id)
-        } catch (profileError) {
+
+        // 异步获取用户资料，不阻塞登录流程
+        fetchUserProfile(data.user.id).catch(profileError => {
           console.warn('Failed to fetch user profile after login:', profileError)
-          // 不阻塞登录流程
-        }
+        })
       }
 
       return data
@@ -390,9 +426,9 @@ export const useSupabaseAuthStore = defineStore('supabaseAuth', () => {
       
       if (hasValidSession && supabase) {
         try {
-          // 添加超时控制，避免长时间等待
+          // 减少超时时间，避免长时间等待
           const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error('登出请求超时')), 10000)
+            setTimeout(() => reject(new Error('登出请求超时')), 3000) // 减少到3秒
           })
           
           const logoutPromise = supabase.auth.signOut({ scope: 'local' })
@@ -406,9 +442,7 @@ export const useSupabaseAuthStore = defineStore('supabaseAuth', () => {
           }
         } catch (networkError: any) {
           // 捕获所有网络相关错误，包括 ERR_ABORTED
-          logError(networkError, 'Logout request')
-          const userMessage = showUserFriendlyError(networkError)
-          console.warn('登出请求失败（可能是网络问题），继续清除本地状态:', userMessage)
+          console.warn('登出请求失败（可能是网络问题），继续清除本地状态:', networkError.message)
         }
       } else {
         console.log('没有有效会话或 Supabase 实例，直接清除本地状态')

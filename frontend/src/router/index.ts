@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useSupabaseAuthStore } from '@/stores/supabaseAuth'
 import { isSupabaseConfigured } from '@/lib/supabase'
+import { preloadService } from '@/services/preloadService'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -133,10 +134,10 @@ router.beforeEach(async (to, from, next) => {
     // 延迟获取store，确保Pinia已经初始化
     const authStore = useSupabaseAuthStore()
     
-    // 初始化认证状态（添加超时保护）
+    // 初始化认证状态（减少超时时间）
     const initPromise = authStore.initializeAuth()
     const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Auth initialization timeout')), 5000)
+      setTimeout(() => reject(new Error('Auth initialization timeout')), 2000) // 减少到2秒
     )
     
     try {
@@ -176,6 +177,10 @@ router.beforeEach(async (to, from, next) => {
         next('/login')
       }
     } else {
+      // 智能预加载相关组件
+       if (to.meta.requiresAuth && authStore.user?.role) {
+         preloadService.smartPreload(to.path, authStore.user.role)
+       }
       next()
     }
   } catch (error) {

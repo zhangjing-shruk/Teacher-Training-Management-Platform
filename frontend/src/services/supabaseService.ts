@@ -10,6 +10,7 @@ import {
   PRACTICE_STATUS,
   MATERIAL_TYPES
 } from '@/lib/supabase'
+import { cacheService } from './cacheService'
 
 // 检查 Supabase 是否可用的辅助函数
 function ensureSupabaseAvailable() {
@@ -23,27 +24,35 @@ function ensureSupabaseAvailable() {
 export class TrainingMaterialService {
   // 获取所有培训资料
   static async getAll() {
-    const client = ensureSupabaseAvailable()
-    const { data, error } = await client
-      .from(TABLES.TRAINING_MATERIALS)
-      .select('*')
-      .order('created_at', { ascending: false })
+    const cacheKey = cacheService.queryKey('training_materials', { action: 'getAll' })
+    
+    return cacheService.getOrSet(cacheKey, async () => {
+      const client = ensureSupabaseAvailable()
+      const { data, error } = await client
+        .from(TABLES.TRAINING_MATERIALS)
+        .select('*')
+        .order('created_at', { ascending: false })
 
-    if (error) throw error
-    return data as TrainingMaterial[]
+      if (error) throw error
+      return data as TrainingMaterial[]
+    }, 3 * 60 * 1000) // 缓存3分钟
   }
 
   // 根据ID获取培训资料
   static async getById(id: string) {
-    const client = ensureSupabaseAvailable()
-    const { data, error } = await client
-      .from(TABLES.TRAINING_MATERIALS)
-      .select('*')
-      .eq('id', id)
-      .single()
+    const cacheKey = cacheService.queryKey('training_materials', { action: 'getById', id })
+    
+    return cacheService.getOrSet(cacheKey, async () => {
+      const client = ensureSupabaseAvailable()
+      const { data, error } = await client
+        .from(TABLES.TRAINING_MATERIALS)
+        .select('*')
+        .eq('id', id)
+        .single()
 
-    if (error) throw error
-    return data as TrainingMaterial
+      if (error) throw error
+      return data as TrainingMaterial
+    }, 5 * 60 * 1000) // 缓存5分钟
   }
 
   // 创建培训资料（管理员）
@@ -59,6 +68,11 @@ export class TrainingMaterialService {
       .single()
 
     if (error) throw error
+    
+    // 清除相关缓存
+    const getAllCacheKey = cacheService.queryKey('training_materials', { action: 'getAll' })
+    cacheService.delete(getAllCacheKey)
+    
     return data as TrainingMaterial
   }
 
@@ -73,6 +87,13 @@ export class TrainingMaterialService {
       .single()
 
     if (error) throw error
+    
+    // 清除相关缓存
+    const getAllCacheKey = cacheService.queryKey('training_materials', { action: 'getAll' })
+    const getByIdCacheKey = cacheService.queryKey('training_materials', { action: 'getById', id })
+    cacheService.delete(getAllCacheKey)
+    cacheService.delete(getByIdCacheKey)
+    
     return data as TrainingMaterial
   }
 
@@ -85,6 +106,12 @@ export class TrainingMaterialService {
       .eq('id', id)
 
     if (error) throw error
+    
+    // 清除相关缓存
+    const getAllCacheKey = cacheService.queryKey('training_materials', { action: 'getAll' })
+    const getByIdCacheKey = cacheService.queryKey('training_materials', { action: 'getById', id })
+    cacheService.delete(getAllCacheKey)
+    cacheService.delete(getByIdCacheKey)
   }
 
   // 增加下载次数
@@ -99,41 +126,49 @@ export class TrainingMaterialService {
 export class LearningProgressService {
   // 获取用户学习进度
   static async getUserProgress(userId: string) {
-    const client = ensureSupabaseAvailable()
+    const cacheKey = cacheService.userKey(userId, 'learning_progress')
     
-    // 简化查询，避免复杂的关联查询
-    const { data, error } = await client
-      .from(TABLES.LEARNING_PROGRESS)
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(50) // 限制返回数量，提高性能
+    return cacheService.getOrSet(cacheKey, async () => {
+      const client = ensureSupabaseAvailable()
+      
+      // 简化查询，避免复杂的关联查询
+      const { data, error } = await client
+        .from(TABLES.LEARNING_PROGRESS)
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(50) // 限制返回数量，提高性能
 
-    if (error) throw error
-    return data as LearningProgress[]
+      if (error) throw error
+      return data as LearningProgress[]
+    }, 2 * 60 * 1000) // 缓存2分钟
   }
 
   // 获取用户学习进度（包含资料信息）- 仅在需要时调用
   static async getUserProgressWithMaterials(userId: string) {
-    const client = ensureSupabaseAvailable()
-    const { data, error } = await client
-      .from(TABLES.LEARNING_PROGRESS)
-      .select(`
-        *,
-        training_materials (
-          id,
-          title,
-          description,
-          material_type,
-          duration_minutes
-        )
-      `)
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(20) // 限制返回数量
+    const cacheKey = cacheService.userKey(userId, 'learning_progress_with_materials')
+    
+    return cacheService.getOrSet(cacheKey, async () => {
+      const client = ensureSupabaseAvailable()
+      const { data, error } = await client
+        .from(TABLES.LEARNING_PROGRESS)
+        .select(`
+          *,
+          training_materials (
+            id,
+            title,
+            description,
+            material_type,
+            duration_minutes
+          )
+        `)
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(20) // 限制返回数量
 
-    if (error) throw error
-    return data as (LearningProgress & { training_materials: TrainingMaterial })[]
+      if (error) throw error
+      return data as (LearningProgress & { training_materials: TrainingMaterial })[]
+    }, 3 * 60 * 1000) // 缓存3分钟
   }
 
   // 开始学习
@@ -152,6 +187,13 @@ export class LearningProgressService {
       .single()
 
     if (error) throw error
+    
+    // 清除用户学习进度缓存
+    const progressCacheKey = cacheService.userKey(userId, 'learning_progress')
+    const progressWithMaterialsCacheKey = cacheService.userKey(userId, 'learning_progress_with_materials')
+    cacheService.delete(progressCacheKey)
+    cacheService.delete(progressWithMaterialsCacheKey)
+    
     return data as LearningProgress
   }
 
@@ -176,6 +218,13 @@ export class LearningProgressService {
       .single()
 
     if (error) throw error
+    
+    // 清除用户学习进度缓存
+    const progressCacheKey = cacheService.userKey(userId, 'learning_progress')
+    const progressWithMaterialsCacheKey = cacheService.userKey(userId, 'learning_progress_with_materials')
+    cacheService.delete(progressCacheKey)
+    cacheService.delete(progressWithMaterialsCacheKey)
+    
     return data as LearningProgress
   }
 
