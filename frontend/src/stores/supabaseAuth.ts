@@ -181,11 +181,18 @@ export const useSupabaseAuthStore = defineStore('supabaseAuth', () => {
     }
     
     try {
-      const { data, error: fetchError } = await supabase
+      // 添加超时处理
+      const profilePromise = supabase
         .from('users')
         .select('*')
         .eq('id', userId)
         .single()
+      
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('用户资料获取超时')), 10000)
+      )
+      
+      const { data, error: fetchError } = await Promise.race([profilePromise, timeoutPromise]) as any
 
       if (fetchError) {
         if (fetchError.code === 'PGRST116') {

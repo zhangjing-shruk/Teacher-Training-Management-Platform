@@ -100,6 +100,22 @@ export class LearningProgressService {
   // 获取用户学习进度
   static async getUserProgress(userId: string) {
     const client = ensureSupabaseAvailable()
+    
+    // 简化查询，避免复杂的关联查询
+    const { data, error } = await client
+      .from(TABLES.LEARNING_PROGRESS)
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(50) // 限制返回数量，提高性能
+
+    if (error) throw error
+    return data as LearningProgress[]
+  }
+
+  // 获取用户学习进度（包含资料信息）- 仅在需要时调用
+  static async getUserProgressWithMaterials(userId: string) {
+    const client = ensureSupabaseAvailable()
     const { data, error } = await client
       .from(TABLES.LEARNING_PROGRESS)
       .select(`
@@ -114,6 +130,7 @@ export class LearningProgressService {
       `)
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
+      .limit(20) // 限制返回数量
 
     if (error) throw error
     return data as (LearningProgress & { training_materials: TrainingMaterial })[]
@@ -192,6 +209,7 @@ export class PracticeSessionService {
       .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
+      .limit(30) // 限制返回数量，提高性能
 
     if (error) throw error
     return data as PracticeSession[]
@@ -296,6 +314,7 @@ export class FeedbackService {
       `)
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
+      .limit(25) // 限制返回数量，提高性能
 
     if (error) throw error
     return data as (Feedback & { practice_sessions: PracticeSession })[]

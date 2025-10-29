@@ -327,17 +327,30 @@ const fetchMaterials = async () => {
       // 本地模式：使用本地存储的进度
       progressData = localAuthStore.getUserLearningProgress()
     } else {
-      // Supabase模式：从服务器获取进度
+      // Supabase模式：从服务器获取进度（添加超时处理）
       try {
         const { useSupabaseAuthStore } = await import('@/stores/supabaseAuth')
         const authStore = useSupabaseAuthStore()
         
         if (authStore.user) {
           const { LearningProgressService } = await import('@/services/supabaseService')
-          progressData = await LearningProgressService.getUserProgress(authStore.user.id)
+          
+          // 添加超时处理，避免长时间等待
+          const progressPromise = LearningProgressService.getUserProgress(authStore.user.id)
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('获取学习进度超时')), 8000)
+          )
+          
+          try {
+            progressData = await Promise.race([progressPromise, timeoutPromise]) as any[]
+          } catch (timeoutErr) {
+            console.warn('获取学习进度超时，使用默认数据:', timeoutErr)
+            progressData = []
+          }
         }
       } catch (progressErr) {
         console.warn('获取学习进度失败:', progressErr)
+        progressData = []
       }
     }
 
