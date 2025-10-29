@@ -128,23 +128,21 @@ const router = createRouter({
   ],
 })
 
-// 路由守卫
+// 全局路由守卫
 router.beforeEach(async (to, from, next) => {
   try {
-    // 延迟获取store，确保Pinia已经初始化
     const authStore = useSupabaseAuthStore()
     
-    // 初始化认证状态（减少超时时间）
-    const initPromise = authStore.initializeAuth()
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Auth initialization timeout')), 2000) // 减少到2秒
+    // 确保认证状态已初始化（设置超时）
+    const initTimeout = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Auth initialization timeout')), 3000)
     )
     
     try {
-      await Promise.race([initPromise, timeoutPromise])
+      await Promise.race([authStore.initializeAuth(), initTimeout])
     } catch (error) {
-      console.warn('Auth initialization failed or timed out:', error)
-      // 如果认证初始化失败，允许访问公共路由
+      console.warn('Auth initialization timeout or failed:', error)
+      // 如果初始化失败，但不是需要认证的路由，允许访问
       if (!to.meta.requiresAuth) {
         return next()
       }
@@ -156,31 +154,53 @@ router.beforeEach(async (to, from, next) => {
       console.log('需要认证但用户未登录，重定向到登录页')
       next('/login')
     } else if (to.meta.requiresGuest && authStore.isAuthenticated) {
-      // 根据用户角色重定向
-      const userRole = authStore.user?.role
+      // 等待用户角色加载完成
+      let userRole = authStore.user?.role
+      if (!userRole && authStore.isAuthenticated) {
+        // 如果用户已认证但角色还未加载，等待一下
+        await new Promise(resolve => setTimeout(resolve, 100))
+        userRole = authStore.user?.role
+      }
+      
       console.log('用户已登录，角色:', userRole)
       next(userRole === 'manager' ? '/manager' : '/teacher')
-    } else if (to.meta.role && authStore.user?.role !== to.meta.role) {
+    } else if (to.meta.role && authStore.isAuthenticated) {
+      // 等待用户角色加载完成
+      let userRole = authStore.user?.role
+      if (!userRole) {
+        // 如果角色还未加载，等待一下
+        await new Promise(resolve => setTimeout(resolve, 200))
+        userRole = authStore.user?.role
+      }
+      
       // 角色权限检查
-      console.log('角色权限不匹配:', {
-        required: to.meta.role,
-        actual: authStore.user?.role,
-        path: to.path
-      })
-      // 根据用户实际角色重定向到正确的页面
-      const userRole = authStore.user?.role
-      if (userRole === 'manager') {
-        next('/manager')
-      } else if (userRole === 'teacher') {
-        next('/teacher')
+      if (userRole !== to.meta.role) {
+        console.log('角色权限不匹配:', {
+          required: to.meta.role,
+          actual: userRole,
+          path: to.path
+        })
+        // 根据用户实际角色重定向到正确的页面
+        if (userRole === 'manager') {
+          next('/manager')
+        } else if (userRole === 'teacher') {
+          next('/teacher')
+        } else {
+          next('/login')
+        }
       } else {
-        next('/login')
+        // 角色匹配，允许访问
+        // 智能预加载相关组件
+        if (to.meta.requiresAuth && userRole) {
+          preloadService.smartPreload(to.path, userRole)
+        }
+        next()
       }
     } else {
       // 智能预加载相关组件
-       if (to.meta.requiresAuth && authStore.user?.role) {
-         preloadService.smartPreload(to.path, authStore.user.role)
-       }
+      if (to.meta.requiresAuth && authStore.user?.role) {
+        preloadService.smartPreload(to.path, authStore.user.role)
+      }
       next()
     }
   } catch (error) {

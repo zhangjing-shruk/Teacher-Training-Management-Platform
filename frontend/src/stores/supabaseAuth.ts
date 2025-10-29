@@ -145,10 +145,22 @@ export const useSupabaseAuthStore = defineStore('supabaseAuth', () => {
         
         if (currentSession) {
           session.value = currentSession
-          // 异步获取用户资料，不阻塞初始化
-          fetchUserProfile(currentSession.user.id).catch(profileError => {
+          // 同步获取用户资料，确保角色信息立即可用
+          try {
+            await fetchUserProfile(currentSession.user.id)
+          } catch (profileError) {
             console.warn('Failed to fetch user profile:', profileError)
-          })
+            // 如果获取失败，设置默认用户信息避免页面闪烁
+            user.value = {
+              id: currentSession.user.id,
+              email: currentSession.user.email || '',
+              full_name: currentSession.user.user_metadata?.full_name || currentSession.user.email || '',
+              role: USER_ROLES.TEACHER, // 默认角色
+              is_active: true,
+              created_at: currentSession.user.created_at || new Date().toISOString(),
+              updated_at: currentSession.user.updated_at || new Date().toISOString()
+            }
+          }
         }
 
         // 监听认证状态变化（只设置一次）
@@ -211,7 +223,7 @@ export const useSupabaseAuthStore = defineStore('supabaseAuth', () => {
     }
     
     try {
-      // 减少超时时间
+      // 减少超时时间，提高响应速度
       const profilePromise = supabase
         .from('users')
         .select('*')
@@ -219,16 +231,33 @@ export const useSupabaseAuthStore = defineStore('supabaseAuth', () => {
         .single()
       
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('用户资料获取超时')), 3000) // 减少到3秒
+        setTimeout(() => reject(new Error('用户资料获取超时')), 2000) // 减少到2秒
       )
       
       const { data, error: fetchError } = await Promise.race([profilePromise, timeoutPromise]) as any
 
       if (fetchError) {
         if (fetchError.code === 'PGRST116') {
-          // 用户资料不存在，可能需要创建
-          console.warn('User profile not found, user may need to complete registration')
-          return null
+          // 用户资料不存在，创建默认资料
+          console.log('User profile not found, creating default profile')
+          const defaultProfile = {
+            id: userId,
+            email: session.value?.user?.email || '',
+            full_name: session.value?.user?.user_metadata?.full_name || session.value?.user?.email || '',
+            role: USER_ROLES.TEACHER,
+            is_active: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }
+          
+          // 缓存默认资料
+          userProfileCache.value.set(userId, {
+            data: defaultProfile,
+            timestamp: Date.now()
+          })
+          
+          user.value = defaultProfile
+          return defaultProfile
         }
         throw fetchError
       }
@@ -243,8 +272,26 @@ export const useSupabaseAuthStore = defineStore('supabaseAuth', () => {
       return data
     } catch (err: any) {
       console.error('Error fetching user profile:', err)
-      // 不设置全局错误，避免影响其他功能
-      return null
+      
+      // 设置默认用户信息
+      const defaultUser = {
+        id: userId,
+        email: session.value?.user?.email || '',
+        full_name: session.value?.user?.user_metadata?.full_name || session.value?.user?.email || '',
+        role: USER_ROLES.TEACHER,
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+      
+      // 缓存默认用户信息
+      userProfileCache.value.set(userId, {
+        data: defaultUser,
+        timestamp: Date.now()
+      })
+      
+      user.value = defaultUser
+      return defaultUser
     }
   }
 
